@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { EstabelecimentoTipo, NivelRelacionamento } from '@/types';
 import HorarioFuncionamentoInput from '@/components/HorarioFuncionamentoInput';
 
-export default function AdicionarPorLinkPage() {
+function AdicionarPorLinkContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [googleUrl, setGoogleUrl] = useState('');
@@ -443,5 +443,20 @@ export default function AdicionarPorLinkPage() {
       )}
 
     </div>
+  );
+}
+
+export default function AdicionarPorLinkPage() {
+  return (
+    <Suspense fallback={
+      <div className="text-center py-12">
+        <div className="w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+        <p className="text-gray-500">Carregando...</p>
+      </div>
+    }>
+      <AdicionarPorLinkContent />
+    </Suspense>
   );
 }

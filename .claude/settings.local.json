@@ -3,7 +3,14 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - R.I.P. Pet CRM System\n\nSistema completo de CRM para gerenciamento de relacionamento com estabelecimentos veterinários.\n\nPrincipais funcionalidades:\n- Gestão de estabelecimentos com integração Google Maps\n- Sistema de relacionamento de 0-5 estrelas\n- Mapa interativo com Leaflet\n- Dashboard moderno com estatísticas\n- Integração com Supabase\n- Campos de Instagram e WhatsApp\n- Dark mode completo\n- Interface responsiva\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(gh:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
