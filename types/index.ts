@@ -140,3 +140,48 @@ export interface PreparacaoVisita {
   pendencias: string[];
   indicacoesRecentes: Indicacao[];
 }
+
+// ===== TIPOS DE AUTENTICAÇÃO =====
+
+// Tipo de unidade
+export interface Unidade {
+  id: string;
+  nome: string;
+  cidade: string;
+  estado: string;
+  endereco?: string;
+  telefone?: string;
+  email?: string;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+// Tipo de cargo de usuário
+export type UserCargo = 'admin' | 'gestor' | 'vendedor';
+
+// Perfil de usuário
+export interface Perfil {
+  id: string;
+  nome_completo: string;
+  email: string;
+  unidade_id: string | null;
+  cargo: UserCargo | null;
+  avatar_url?: string;
+  telefone?: string;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+// Contexto de autenticação
+export interface AuthContextType {
+  user: any | null; // User do Supabase
+  perfil: Perfil | null;
+  unidade: Unidade | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, nomeCompleto: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  updatePerfil: (data: Partial<Perfil>) => Promise<void>;
+}
