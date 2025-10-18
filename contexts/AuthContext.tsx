@@ -18,6 +18,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Carrega perfil e unidade do usuário
   const loadUserData = async (userId: string) => {
     try {
+      console.log('📥 Carregando dados do usuário:', userId);
+
       // Buscar perfil
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
@@ -25,8 +27,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
+      console.log('👤 Perfil:', { perfilData, perfilError });
+
       if (perfilError) {
-        console.error('Erro ao carregar perfil:', perfilError);
+        console.error('❌ Erro ao carregar perfil:', perfilError);
         return;
       }
 
@@ -40,14 +44,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', perfilData.unidade_id)
           .single();
 
+        console.log('🏢 Unidade:', { unidadeData, unidadeError });
+
         if (unidadeError) {
-          console.error('Erro ao carregar unidade:', unidadeError);
+          console.error('❌ Erro ao carregar unidade:', unidadeError);
         } else {
           setUnidade(unidadeData);
+          console.log('✅ Unidade carregada:', unidadeData.nome);
         }
+      } else {
+        console.warn('⚠️ Perfil sem unidade associada');
       }
+
+      console.log('✅ Dados do usuário carregados!');
     } catch (error) {
-      console.error('Erro ao carregar dados do usuário:', error);
+      console.error('💥 Erro ao carregar dados do usuário:', error);
     }
   };
 
@@ -97,21 +108,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Função de login
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('🔐 Tentando login com:', email);
+      console.log('🔗 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) return { error };
+      console.log('📊 Resposta do Supabase:', { data, error });
+
+      if (error) {
+        console.error('❌ Erro no login:', error);
+        return { error };
+      }
 
       if (data.user) {
+        console.log('✅ Usuário autenticado:', data.user.email);
         setUser(data.user);
         await loadUserData(data.user.id);
       }
 
       return { error: null };
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('💥 Erro crítico no login:', error);
       return { error };
     }
   };

@@ -7,7 +7,7 @@ import Header from './Header';
 import ProtectedRoute from '../auth/ProtectedRoute';
 
 // Páginas que não precisam de layout (login, etc.)
-const PUBLIC_PAGES = ['/login', '/cadastro'];
+const PUBLIC_PAGES = ['/login', '/cadastro', '/test-supabase'];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

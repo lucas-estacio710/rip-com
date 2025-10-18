@@ -18,19 +18,24 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    console.log('🚀 Iniciando login...');
+    console.log('📧 Email:', email);
+
     try {
       const { error: signInError } = await signIn(email, password);
 
       if (signInError) {
-        setError('Email ou senha inválidos');
+        console.error('❌ Erro retornado:', signInError);
+        setError(`Erro: ${signInError.message || 'Email ou senha inválidos'}`);
         setLoading(false);
         return;
       }
 
+      console.log('✅ Login bem-sucedido! Redirecionando...');
       // Redireciona para a home após login bem-sucedido
       router.push('/');
     } catch (err) {
-      console.error('Erro no login:', err);
+      console.error('💥 Erro crítico:', err);
       setError('Ocorreu um erro ao fazer login');
       setLoading(false);
     }

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-const PUBLIC_PAGES = ['/login', '/cadastro'];
+const PUBLIC_PAGES = ['/login', '/cadastro', '/test-supabase'];
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
