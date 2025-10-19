@@ -28,6 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     loadingUserDataRef.current = true;
 
+    // Timeout de segurança - se demorar mais de 10s, abortar
+    const timeoutId = setTimeout(() => {
+      console.error('⏰ TIMEOUT: loadUserData demorou mais de 10 segundos!');
+      loadingUserDataRef.current = false;
+      // Não setar perfil/unidade como null - manter dados antigos
+    }, 10000);
+
     try {
       console.log('📥 Carregando dados do usuário:', userId);
 
@@ -87,8 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('✅ Dados do usuário carregados!');
+      clearTimeout(timeoutId);
     } catch (error) {
       console.error('💥 Erro crítico ao carregar dados do usuário:', error);
+      clearTimeout(timeoutId);
       // Define valores null para desbloquear a UI
       setPerfil(null);
       setUnidade(null);
@@ -122,13 +131,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         console.log('Auth state changed:', event);
 
+        // SEMPRE seta loading false ANTES de fazer qualquer coisa
+        // Isso previne que a UI fique travada se algo der errado
+        setLoading(false);
+
         if (session?.user) {
           setUser(session.user);
 
           // Só recarrega dados se for login inicial ou se mudou de usuário
           // Eventos de TOKEN_REFRESHED não precisam recarregar perfil/unidade
           if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-            await loadUserData(session.user.id);
+            // Verificar se já temos dados do perfil carregados
+            // Se já temos e é só um refresh de token, não recarregar
+            const shouldReload = !perfil || !unidade;
+
+            if (shouldReload) {
+              console.log('📥 Primeira carga ou dados ausentes - carregando perfil');
+              await loadUserData(session.user.id);
+            } else {
+              console.log('✅ Dados já carregados - pulando recarga');
+            }
           } else if (event === 'TOKEN_REFRESHED') {
             console.log('🔄 Token renovado automaticamente - dados não precisam ser recarregados');
           }
@@ -137,8 +159,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setPerfil(null);
           setUnidade(null);
         }
-
-        setLoading(false);
       }
     );
 
