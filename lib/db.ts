@@ -11,27 +11,47 @@ import type { Estabelecimento } from './supabase';
 // ============================================
 
 export async function getAllEstabelecimentos(): Promise<Estabelecimento[]> {
-  console.log('🔌 Criando cliente Supabase...');
-  const supabase = createClient();
+  try {
+    console.log('🔌 Criando cliente Supabase...');
+    const supabase = createClient();
 
-  console.log('📡 Fazendo query ao Supabase...');
-  const startTime = Date.now();
+    // Verificar se há sessão ativa
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('🔐 Sessão ativa:', session ? 'SIM' : 'NÃO');
 
-  const { data, error } = await supabase
-    .from('estabelecimentos')
-    .select('*')
-    .order('nome', { ascending: true });
+    if (!session) {
+      console.error('❌ Sem sessão ativa! RLS vai bloquear a query.');
+      throw new Error('Usuário não autenticado');
+    }
 
-  const duration = Date.now() - startTime;
-  console.log(`⏱️ Query completou em ${duration}ms`);
+    console.log('📡 Fazendo query ao Supabase...');
+    const startTime = Date.now();
 
-  if (error) {
-    console.error('❌ Erro ao buscar estabelecimentos:', error);
+    const { data, error } = await supabase
+      .from('estabelecimentos')
+      .select('*')
+      .order('nome', { ascending: true });
+
+    const duration = Date.now() - startTime;
+    console.log(`⏱️ Query completou em ${duration}ms`);
+
+    if (error) {
+      console.error('❌ Erro ao buscar estabelecimentos:', error);
+      console.error('❌ Detalhes do erro:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      throw error;
+    }
+
+    console.log(`✅ Retornando ${data?.length || 0} estabelecimentos`);
+    return data || [];
+  } catch (error) {
+    console.error('💥 Erro crítico em getAllEstabelecimentos:', error);
     return [];
   }
-
-  console.log(`✅ Retornando ${data?.length || 0} estabelecimentos`);
-  return data || [];
 }
 
 export async function getEstabelecimentoById(id: string): Promise<Estabelecimento | null> {
