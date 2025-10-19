@@ -18,14 +18,38 @@ export function createClient() {
         autoRefreshToken: true,
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,
         detectSessionInUrl: true,
+        // Configurações de debug e resiliência
+        storageKey: 'rip-pet-auth',
+        flowType: 'pkce', // Mais seguro
       },
       global: {
         headers: {
           'x-application-name': 'rip-pet-santos',
         },
       },
+      // Aumentar timeout para conexões lentas
+      db: {
+        schema: 'public',
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
     }
   );
+
+  // Log de debug para monitorar refresh de tokens
+  if (typeof window !== 'undefined') {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('🔄 Token refresh bem-sucedido');
+      } else if (event === 'SIGNED_OUT') {
+        console.log('👋 Usuário saiu - limpando cache');
+        supabaseClient = null; // Limpar cache ao fazer logout
+      }
+    });
+  }
 
   return supabaseClient;
 }
