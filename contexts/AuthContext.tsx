@@ -124,7 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (session?.user) {
           setUser(session.user);
-          await loadUserData(session.user.id);
+
+          // Só recarrega dados se for login inicial ou se mudou de usuário
+          // Eventos de TOKEN_REFRESHED não precisam recarregar perfil/unidade
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            await loadUserData(session.user.id);
+          } else if (event === 'TOKEN_REFRESHED') {
+            console.log('🔄 Token renovado automaticamente - dados não precisam ser recarregados');
+          }
         } else {
           setUser(null);
           setPerfil(null);
