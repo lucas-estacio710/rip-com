@@ -1,8 +1,29 @@
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+
+// Cache do cliente para reusar a mesma instância
+let supabaseClient: ReturnType<typeof createSupabaseClient> | null = null;
 
 export function createClient() {
-  return createBrowserClient(
+  // Reusar cliente existente para evitar criar múltiplas conexões
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
+  supabaseClient = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+      global: {
+        headers: {
+          'x-application-name': 'rip-pet-santos',
+        },
+      },
+    }
   );
+
+  return supabaseClient;
 }

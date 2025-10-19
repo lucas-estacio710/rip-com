@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import type { AuthContextType, Perfil, Unidade } from '@/types';
@@ -15,42 +15,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const supabase = createClient();
 
+  // Flag para evitar múltiplas chamadas simultâneas
+  const loadingUserDataRef = useRef(false);
+
   // Carrega perfil e unidade do usuário
   const loadUserData = async (userId: string) => {
+    // Evitar múltiplas chamadas simultâneas (problema do React Strict Mode)
+    if (loadingUserDataRef.current) {
+      console.log('⚠️ Já está carregando dados do usuário, pulando...');
+      return;
+    }
+
+    loadingUserDataRef.current = true;
+
     try {
       console.log('📥 Carregando dados do usuário:', userId);
 
-      // Buscar perfil
+      // Buscar perfil - Testando com novo cliente
+      console.log('🔍 Buscando perfil...');
+      const startTimePerfil = Date.now();
+
       const { data: perfilData, error: perfilError } = await supabase
         .from('perfis')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      console.log('👤 Perfil:', { perfilData, perfilError });
+      const durationPerfil = Date.now() - startTimePerfil;
+      console.log(`⏱️ Query de perfil completou em ${durationPerfil}ms`);
+      console.log('👤 Perfil resultado:', { perfilData, perfilError });
 
       if (perfilError) {
         console.error('❌ Erro ao carregar perfil:', perfilError);
+        setPerfil(null);
+        return;
+      }
+
+      if (!perfilData) {
+        console.warn('⚠️ Perfil não encontrado');
+        setPerfil(null);
         return;
       }
 
       setPerfil(perfilData);
+      console.log('✅ Perfil definido!');
 
       // Buscar unidade se o perfil tiver uma
       if (perfilData?.unidade_id) {
+        console.log('🔍 Buscando unidade...');
+        const startTime = Date.now();
+
         const { data: unidadeData, error: unidadeError } = await supabase
           .from('unidades')
           .select('*')
           .eq('id', perfilData.unidade_id)
-          .single();
+          .maybeSingle();
 
-        console.log('🏢 Unidade:', { unidadeData, unidadeError });
+        const duration = Date.now() - startTime;
+        console.log(`⏱️ Query de unidade completou em ${duration}ms`);
 
         if (unidadeError) {
           console.error('❌ Erro ao carregar unidade:', unidadeError);
-        } else {
+        } else if (unidadeData) {
           setUnidade(unidadeData);
           console.log('✅ Unidade carregada:', unidadeData.nome);
+        } else {
+          console.warn('⚠️ Unidade não encontrada');
         }
       } else {
         console.warn('⚠️ Perfil sem unidade associada');
@@ -58,7 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('✅ Dados do usuário carregados!');
     } catch (error) {
-      console.error('💥 Erro ao carregar dados do usuário:', error);
+      console.error('💥 Erro crítico ao carregar dados do usuário:', error);
+      // Define valores null para desbloquear a UI
+      setPerfil(null);
+      setUnidade(null);
+    } finally {
+      loadingUserDataRef.current = false;
     }
   };
 

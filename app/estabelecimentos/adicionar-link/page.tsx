@@ -181,6 +181,8 @@ function AdicionarPorLinkContent() {
     }
 
     try {
+      console.log('🔄 Iniciando salvamento...');
+
       // Importa função do banco
       const { createEstabelecimento } = await import('@/lib/db');
 
@@ -195,6 +197,8 @@ function AdicionarPorLinkContent() {
         telefone: telefone || null,
         email: null,
         website: null,
+        instagram: null,
+        whatsapp: null,
         horario_funcionamento: horarioFuncionamento || null,
         latitude: latitude || null,
         longitude: longitude || null,
@@ -204,19 +208,23 @@ function AdicionarPorLinkContent() {
         ultima_visita: null,
       };
 
+      console.log('📝 Dados a serem salvos:', novoEstabelecimento);
+
       // Salva no Supabase
       const saved = await createEstabelecimento(novoEstabelecimento);
 
+      console.log('✅ Resultado:', saved);
+
       if (saved) {
-        console.log('Estabelecimento salvo no Supabase:', saved);
+        console.log('🎉 Estabelecimento salvo com sucesso!');
         alert('Estabelecimento adicionado com sucesso!');
         router.push('/estabelecimentos');
       } else {
-        throw new Error('Erro ao salvar no banco');
+        throw new Error('Nenhum dado retornado do banco');
       }
     } catch (error) {
-      console.error('Erro ao salvar:', error);
-      alert('Erro ao salvar estabelecimento. Verifique o console para mais detalhes.');
+      console.error('❌ Erro ao salvar:', error);
+      alert(`Erro ao salvar estabelecimento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   };
 

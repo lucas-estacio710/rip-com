@@ -1,7 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import EstabelecimentosList from '@/components/EstabelecimentosList';
+
+// Importação dinâmica do MapView (necessário para Leaflet)
+const MapView = dynamic(() => import('@/components/MapView'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+        <p className="text-gray-500">Carregando mapa...</p>
+      </div>
+    </div>
+  ),
+});
 
 export default function LocaisPage() {
   const [activeTab, setActiveTab] = useState<'lista' | 'mapa'>('lista');
@@ -75,24 +92,11 @@ export default function LocaisPage() {
 
       {/* Tab Content */}
       <div className="mt-6">
-        {activeTab === 'lista' && (
-          <div>
-            <iframe
-              src="/estabelecimentos"
-              className="w-full"
-              style={{ height: 'calc(100vh - 280px)', border: 'none' }}
-              title="Lista de Estabelecimentos"
-            />
-          </div>
-        )}
+        {activeTab === 'lista' && <EstabelecimentosList />}
 
         {activeTab === 'mapa' && (
-          <div>
-            <div className="card" style={{ height: 'calc(100vh - 280px)' }}>
-              <p className="text-center text-gray-500 py-12">
-                Mapa será carregado aqui (integração com MapView)
-              </p>
-            </div>
+          <div className="card" style={{ height: 'calc(100vh - 280px)' }}>
+            <MapView />
           </div>
         )}
       </div>

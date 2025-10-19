@@ -3,7 +3,7 @@
  * Usa Supabase como backend
  */
 
-import { supabase } from './supabase';
+import { createClient } from './supabase-client';
 import type { Estabelecimento } from './supabase';
 
 // ============================================
@@ -11,20 +11,31 @@ import type { Estabelecimento } from './supabase';
 // ============================================
 
 export async function getAllEstabelecimentos(): Promise<Estabelecimento[]> {
+  console.log('🔌 Criando cliente Supabase...');
+  const supabase = createClient();
+
+  console.log('📡 Fazendo query ao Supabase...');
+  const startTime = Date.now();
+
   const { data, error } = await supabase
     .from('estabelecimentos')
     .select('*')
     .order('nome', { ascending: true });
 
+  const duration = Date.now() - startTime;
+  console.log(`⏱️ Query completou em ${duration}ms`);
+
   if (error) {
-    console.error('Erro ao buscar estabelecimentos:', error);
+    console.error('❌ Erro ao buscar estabelecimentos:', error);
     return [];
   }
 
+  console.log(`✅ Retornando ${data?.length || 0} estabelecimentos`);
   return data || [];
 }
 
 export async function getEstabelecimentoById(id: string): Promise<Estabelecimento | null> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('estabelecimentos')
     .select('*')
@@ -40,6 +51,7 @@ export async function getEstabelecimentoById(id: string): Promise<Estabeleciment
 }
 
 export async function createEstabelecimento(estabelecimento: Omit<Estabelecimento, 'id' | 'criado_em' | 'atualizado_em'>): Promise<Estabelecimento | null> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('estabelecimentos')
     .insert([estabelecimento])
@@ -55,6 +67,7 @@ export async function createEstabelecimento(estabelecimento: Omit<Estabeleciment
 }
 
 export async function updateEstabelecimento(id: string, updates: Partial<Omit<Estabelecimento, 'id' | 'criado_em' | 'atualizado_em'>>): Promise<Estabelecimento | null> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('estabelecimentos')
     .update(updates)
@@ -71,6 +84,7 @@ export async function updateEstabelecimento(id: string, updates: Partial<Omit<Es
 }
 
 export async function deleteEstabelecimento(id: string): Promise<boolean> {
+  const supabase = createClient();
   const { error } = await supabase
     .from('estabelecimentos')
     .delete()
@@ -89,6 +103,7 @@ export async function deleteEstabelecimento(id: string): Promise<boolean> {
 // ============================================
 
 export async function getContatosByEstabelecimento(estabelecimentoId: string) {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('contatos')
     .select('*')
@@ -108,9 +123,10 @@ export async function getContatosByEstabelecimento(estabelecimentoId: string) {
 // ============================================
 
 export async function getVisitasByEstabelecimento(estabelecimentoId: string) {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('visitas')
-    .select('*, amenidades(*)')
+    .select('*')
     .eq('estabelecimento_id', estabelecimentoId)
     .order('data', { ascending: false });
 
@@ -127,6 +143,7 @@ export async function getVisitasByEstabelecimento(estabelecimentoId: string) {
 // ============================================
 
 export async function getIndicacoesByEstabelecimento(estabelecimentoId: string) {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('indicacoes')
     .select('*')
@@ -146,6 +163,8 @@ export async function getIndicacoesByEstabelecimento(estabelecimentoId: string) 
 // ============================================
 
 export async function getDashboardStats() {
+  const supabase = createClient();
+
   // Total de estabelecimentos
   const { count: totalEstabelecimentos } = await supabase
     .from('estabelecimentos')
