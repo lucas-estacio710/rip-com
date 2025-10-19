@@ -160,8 +160,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         console.log('✅ Usuário autenticado:', data.user.email);
-        setUser(data.user);
-        await loadUserData(data.user.id);
+        // Não chama loadUserData aqui - o listener onAuthStateChange vai fazer isso
+        // para evitar chamada duplicada
       }
 
       return { error: null };
