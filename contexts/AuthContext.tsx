@@ -28,9 +28,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     loadingUserDataRef.current = true;
 
+    // AbortController para cancelar queries que travam
+    const abortController = new AbortController();
+
     // Timeout de segurança - se demorar mais de 10s, abortar
     const timeoutId = setTimeout(() => {
       console.error('⏰ TIMEOUT: loadUserData demorou mais de 10 segundos!');
+      console.error('🚫 Abortando queries pendentes...');
+      abortController.abort();
       loadingUserDataRef.current = false;
       // Não setar perfil/unidade como null - manter dados antigos
     }, 10000);
@@ -38,7 +43,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('📥 Carregando dados do usuário:', userId);
 
-      // Buscar perfil - Testando com novo cliente
+      // Verificar se a sessão ainda é válida antes de fazer queries
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('❌ Erro ao verificar sessão:', sessionError);
+        clearTimeout(timeoutId);
+        loadingUserDataRef.current = false;
+        return;
+      }
+
+      if (!session) {
+        console.warn('⚠️ Sem sessão ativa - abortando loadUserData');
+        clearTimeout(timeoutId);
+        loadingUserDataRef.current = false;
+        return;
+      }
+
+      console.log('✅ Sessão válida, prosseguindo com queries');
+
+      // Buscar perfil
       console.log('🔍 Buscando perfil...');
       const startTimePerfil = Date.now();
 
@@ -95,9 +119,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('✅ Dados do usuário carregados!');
       clearTimeout(timeoutId);
-    } catch (error) {
-      console.error('💥 Erro crítico ao carregar dados do usuário:', error);
+    } catch (error: any) {
       clearTimeout(timeoutId);
+
+      // Se foi abortado pelo timeout, não fazer nada (já logamos acima)
+      if (error?.name === 'AbortError') {
+        console.log('🛑 Query abortada por timeout - mantendo dados antigos');
+        return;
+      }
+
+      console.error('💥 Erro crítico ao carregar dados do usuário:', error);
       // Define valores null para desbloquear a UI
       setPerfil(null);
       setUnidade(null);
