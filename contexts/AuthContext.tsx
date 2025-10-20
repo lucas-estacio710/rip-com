@@ -21,12 +21,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Carrega perfil e unidade do usuário
   const loadUserData = async (userId: string) => {
     console.log('🎯 loadUserData CHAMADO para userId:', userId);
-    console.log('🔒 loadingUserDataRef.current:', loadingUserDataRef.current);
+    console.log('🔒 loadingUserDataRef.current ANTES:', loadingUserDataRef.current);
+
+    // CRÍTICO: Configurar timeout ANTES de qualquer lógica
+    // Se isso não executar, significa que a função nunca foi chamada
+    const timeoutId = setTimeout(() => {
+      console.error('⏰ TIMEOUT: loadUserData demorou mais de 10 segundos!');
+      console.error('🚫 Forçando unlock do loadingUserDataRef');
+      console.error('🔍 Estado atual - perfil:', perfil, 'unidade:', unidade);
+      console.error('💡 Possível causa: RLS bloqueando query ou sessão inválida');
+      loadingUserDataRef.current = false; // Force unlock
+    }, 10000);
+
+    console.log('⏱️ Timeout configurado com sucesso');
 
     // Evitar múltiplas chamadas simultâneas (problema do React Strict Mode)
     if (loadingUserDataRef.current) {
-      console.log('⚠️ Já está carregando dados do usuário, pulando...');
-      return;
+      console.warn('⚠️ loadingUserDataRef travado! Alguém esqueceu de desbloquear.');
+      console.warn('⚠️ Forçando desbloqueio e continuando...');
+      clearTimeout(timeoutId);
+      loadingUserDataRef.current = false; // Force unlock
+      // Não return - continuar com a execução
     }
 
     console.log('✅ Prosseguindo com loadUserData');
@@ -34,19 +49,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // AbortController para cancelar queries que travam
     const abortController = new AbortController();
-
-    // Timeout de segurança - se demorar mais de 10s, abortar
-    const timeoutId = setTimeout(() => {
-      console.error('⏰ TIMEOUT: loadUserData demorou mais de 10 segundos!');
-      console.error('🚫 Abortando queries pendentes...');
-      console.error('🔍 Estado atual - perfil:', perfil, 'unidade:', unidade);
-      console.error('💡 Possível causa: RLS bloqueando query ou sessão inválida');
-      abortController.abort();
-      loadingUserDataRef.current = false;
-      // Não setar perfil/unidade como null - manter dados antigos
-    }, 10000);
-
-    console.log('⏱️ Timeout agendado para 10 segundos');
 
     try {
       console.log('📥 Carregando dados do usuário:', userId);
