@@ -20,12 +20,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Carrega perfil e unidade do usuário
   const loadUserData = async (userId: string) => {
+    console.log('🎯 loadUserData CHAMADO para userId:', userId);
+    console.log('🔒 loadingUserDataRef.current:', loadingUserDataRef.current);
+
     // Evitar múltiplas chamadas simultâneas (problema do React Strict Mode)
     if (loadingUserDataRef.current) {
       console.log('⚠️ Já está carregando dados do usuário, pulando...');
       return;
     }
 
+    console.log('✅ Prosseguindo com loadUserData');
     loadingUserDataRef.current = true;
 
     // AbortController para cancelar queries que travam
@@ -35,10 +39,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timeoutId = setTimeout(() => {
       console.error('⏰ TIMEOUT: loadUserData demorou mais de 10 segundos!');
       console.error('🚫 Abortando queries pendentes...');
+      console.error('🔍 Estado atual - perfil:', perfil, 'unidade:', unidade);
+      console.error('💡 Possível causa: RLS bloqueando query ou sessão inválida');
       abortController.abort();
       loadingUserDataRef.current = false;
       // Não setar perfil/unidade como null - manter dados antigos
     }, 10000);
+
+    console.log('⏱️ Timeout agendado para 10 segundos');
 
     try {
       console.log('📥 Carregando dados do usuário:', userId);
@@ -172,16 +180,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Só recarrega dados se for login inicial ou se mudou de usuário
           // Eventos de TOKEN_REFRESHED não precisam recarregar perfil/unidade
           if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-            // Verificar se já temos dados do perfil carregados
-            // Se já temos e é só um refresh de token, não recarregar
-            const shouldReload = !perfil || !unidade;
-
-            if (shouldReload) {
-              console.log('📥 Primeira carga ou dados ausentes - carregando perfil');
-              await loadUserData(session.user.id);
-            } else {
-              console.log('✅ Dados já carregados - pulando recarga');
-            }
+            console.log('📥 Evento SIGNED_IN/USER_UPDATED - carregando perfil');
+            await loadUserData(session.user.id);
           } else if (event === 'TOKEN_REFRESHED') {
             console.log('🔄 Token renovado automaticamente - dados não precisam ser recarregados');
           }
@@ -196,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   // Função de login
   const signIn = async (email: string, password: string) => {
