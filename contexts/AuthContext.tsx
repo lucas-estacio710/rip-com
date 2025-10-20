@@ -20,8 +20,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Carrega perfil e unidade do usuário
   const loadUserData = async (userId: string) => {
-    console.log('🎯 loadUserData CHAMADO para userId:', userId);
-    console.log('🔒 loadingUserDataRef.current ANTES:', loadingUserDataRef.current);
+    console.error('🎯 loadUserData CHAMADO para userId:', userId);
+    console.error('🔒 loadingUserDataRef.current ANTES:', loadingUserDataRef.current);
 
     // CRÍTICO: Configurar timeout ANTES de qualquer lógica
     // Se isso não executar, significa que a função nunca foi chamada
@@ -33,18 +33,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loadingUserDataRef.current = false; // Force unlock
     }, 10000);
 
-    console.log('⏱️ Timeout configurado com sucesso');
+    console.error('⏱️ Timeout configurado com sucesso');
 
     // Evitar múltiplas chamadas simultâneas (problema do React Strict Mode)
     if (loadingUserDataRef.current) {
-      console.warn('⚠️ loadingUserDataRef travado! Alguém esqueceu de desbloquear.');
-      console.warn('⚠️ Forçando desbloqueio e continuando...');
+      console.error('⚠️ loadingUserDataRef travado! Alguém esqueceu de desbloquear.');
+      console.error('⚠️ Forçando desbloqueio e continuando...');
       clearTimeout(timeoutId);
       loadingUserDataRef.current = false; // Force unlock
       // Não return - continuar com a execução
     }
 
-    console.log('✅ Prosseguindo com loadUserData');
+    console.error('✅ Prosseguindo com loadUserData');
     loadingUserDataRef.current = true;
 
     // AbortController para cancelar queries que travam
