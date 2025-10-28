@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { APP_VERSION } from '@/lib/version';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -61,15 +62,20 @@ export default function Sidebar() {
   return (
     <aside className="hidden md:flex md:flex-col w-64 bg-blue-900 border-r border-blue-800 h-screen sticky top-0">
       {/* Logo */}
-      <div className="p-6 flex justify-center border-b border-blue-800">
-        <Image
-          src="/rippet_logo.png"
-          alt="R.I.P. Pet Santos"
-          width={180}
-          height={60}
-          className="object-contain"
-          priority
-        />
+      <div className="p-6 border-b border-blue-800">
+        <div className="flex flex-col items-center">
+          <Image
+            src="/rippet_logo.png"
+            alt="R.I.P. Pet Santos"
+            width={180}
+            height={60}
+            className="object-contain"
+            priority
+          />
+          <span className="text-blue-300 text-xs mt-2 font-mono">
+            v{APP_VERSION}
+          </span>
+        </div>
       </div>
 
       {/* Navigation */}
