@@ -12,6 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Types do banco (gerados automaticamente pelo Supabase)
 export type Estabelecimento = {
   id: string;
+  unidade_id: string; // FK para unidades - obrigatório para RLS
   nome: string;
   tipo: 'clinica' | 'hospital' | 'petshop' | 'casa-racao' | 'laboratorio' | 'outro';
   endereco: string;

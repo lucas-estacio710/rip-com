@@ -4,10 +4,12 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { EstabelecimentoTipo, NivelRelacionamento } from '@/types';
 import HorarioFuncionamentoInput from '@/components/HorarioFuncionamentoInput';
+import { useAuth } from '@/contexts/AuthContext';
 
 function AdicionarPorLinkContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { unidade } = useAuth();
   const [googleUrl, setGoogleUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
 
@@ -180,6 +182,11 @@ function AdicionarPorLinkContent() {
       return;
     }
 
+    if (!unidade?.id) {
+      alert('Erro: Unidade não encontrada. Faça login novamente.');
+      return;
+    }
+
     try {
       console.log('🔄 Iniciando salvamento...');
 
@@ -188,6 +195,7 @@ function AdicionarPorLinkContent() {
 
       // Cria novo estabelecimento
       const novoEstabelecimento = {
+        unidade_id: unidade.id, // ✅ CRÍTICO: Necessário para RLS
         nome,
         tipo,
         endereco,

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import type { EstabelecimentoTipo, NivelRelacionamento } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PlaceResult {
   placeId: string;
@@ -28,6 +29,7 @@ interface PlaceDetails extends PlaceResult {
 
 export default function BuscarEstabelecimentoPage() {
   const router = useRouter();
+  const { unidade } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [cidade, setCidade] = useState('Santos, SP');
   const [isSearching, setIsSearching] = useState(false);
@@ -135,23 +137,54 @@ export default function BuscarEstabelecimentoPage() {
   const handleSave = async () => {
     if (!selectedPlace) return;
 
+    if (!unidade?.id) {
+      alert('Erro: Unidade não encontrada. Faça login novamente.');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      // Aqui você pode salvar no Supabase ou em mockData
-      // Por enquanto, vamos apenas redirecionar
-      console.log('Salvando estabelecimento:', {
-        ...selectedPlace,
-        tipo,
-        relacionamento,
-        observacoes,
-      });
+      // Importa função do banco
+      const { createEstabelecimento } = await import('@/lib/db');
 
-      alert('Estabelecimento adicionado com sucesso!');
-      router.push('/estabelecimentos');
+      // Cria novo estabelecimento
+      const novoEstabelecimento = {
+        unidade_id: unidade.id, // ✅ CRÍTICO: Necessário para RLS
+        nome: selectedPlace.nome,
+        tipo,
+        endereco: selectedPlace.endereco,
+        cidade: selectedPlace.cidade,
+        estado: selectedPlace.estado,
+        cep: selectedPlace.cep || null,
+        telefone: selectedPlace.telefone || null,
+        email: null,
+        website: selectedPlace.website || null,
+        instagram: null,
+        whatsapp: null,
+        horario_funcionamento: selectedPlace.horarioFuncionamento || null,
+        latitude: selectedPlace.latitude || null,
+        longitude: selectedPlace.longitude || null,
+        relacionamento,
+        observacoes: observacoes || null,
+        fotos: selectedPlace.foto ? [selectedPlace.foto] : null,
+        ultima_visita: null,
+      };
+
+      console.log('📝 Salvando estabelecimento:', novoEstabelecimento);
+
+      // Salva no Supabase
+      const saved = await createEstabelecimento(novoEstabelecimento);
+
+      if (saved) {
+        alert('Estabelecimento adicionado com sucesso!');
+        router.push('/estabelecimentos');
+      } else {
+        throw new Error('Nenhum dado retornado do banco');
+      }
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      alert('Erro ao salvar estabelecimento.');
+      alert(`Erro ao salvar estabelecimento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setIsSaving(false);
     }

@@ -12,11 +12,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [unidade, setUnidade] = useState<Unidade | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
   // Carrega perfil e unidade do usuário
   const loadUserData = async (userId: string) => {
+    // Previne múltiplas chamadas simultâneas
+    if (isLoadingData) {
+      console.log('⏸️ Já carregando dados, aguardando...');
+      return;
+    }
+
+    setIsLoadingData(true);
+
     try {
       console.log('📥 Carregando dados do usuário:', userId);
 
@@ -29,7 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (perfilError) {
         console.error('❌ Erro ao carregar perfil:', perfilError);
-        setPerfil(null);
+        // Não limpa o perfil em caso de erro - pode ser temporário
+        if (perfilError.code === 'PGRST116') {
+          // Perfil não existe - limpa
+          setPerfil(null);
+        }
         return;
       }
 
@@ -52,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (unidadeError) {
           console.error('❌ Erro ao carregar unidade:', unidadeError);
+          // Não limpa em caso de erro
         } else if (unidadeData) {
           setUnidade(unidadeData);
           console.log('✅ Unidade carregada:', unidadeData.nome);
@@ -59,8 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('💥 Erro ao carregar dados do usuário:', error);
-      setPerfil(null);
-      setUnidade(null);
+      // Não limpa dados em caso de erro de rede
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
@@ -68,21 +83,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // ✅ USA getUser() ao invés de getSession()
-        // getUser() revalida o token no servidor SEMPRE
-        const { data: { user }, error } = await supabase.auth.getUser();
+        console.log('🔄 Inicializando autenticação...');
 
-        if (error) {
-          console.error('Erro ao verificar usuário:', error);
+        // Primeiro tenta getSession (mais rápido, usa cache local)
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          console.log('✅ Sessão local encontrada:', session.user.email);
+          setUser(session.user);
+          await loadUserData(session.user.id);
+        } else {
+          console.log('ℹ️ Nenhuma sessão local encontrada');
           setUser(null);
           setPerfil(null);
           setUnidade(null);
-        } else if (user) {
-          setUser(user);
-          await loadUserData(user.id);
         }
       } catch (error) {
-        console.error('Erro ao inicializar autenticação:', error);
+        console.error('💥 Erro ao inicializar autenticação:', error);
+        setUser(null);
+        setPerfil(null);
+        setUnidade(null);
       } finally {
         setLoading(false);
       }
@@ -93,27 +113,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
+        console.log('🔔 Auth event:', event, 'User:', session?.user?.email || 'none');
 
         // SEMPRE seta loading false ANTES de fazer qualquer coisa
-        // Isso previne que a UI fique travada se algo der errado
         setLoading(false);
 
-        if (session?.user) {
-          setUser(session.user);
-
-          // Só recarrega dados se for login inicial ou se mudou de usuário
-          // Eventos de TOKEN_REFRESHED não precisam recarregar perfil/unidade
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-            console.log('📥 Evento SIGNED_IN/USER_UPDATED - carregando perfil');
-            await loadUserData(session.user.id);
-          } else if (event === 'TOKEN_REFRESHED') {
-            console.log('🔄 Token renovado automaticamente - dados não precisam ser recarregados');
-          }
-        } else {
+        if (event === 'SIGNED_OUT') {
+          console.log('👋 Logout detectado - limpando estado');
           setUser(null);
           setPerfil(null);
           setUnidade(null);
+          return;
+        }
+
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('🔄 Token renovado com sucesso');
+          // Não precisa recarregar dados, apenas atualiza o user
+          if (session?.user) {
+            setUser(session.user);
+          }
+          return;
+        }
+
+        if (event === 'SIGNED_IN') {
+          console.log('✅ Login bem-sucedido:', session?.user?.email);
+          if (session?.user) {
+            setUser(session.user);
+            await loadUserData(session.user.id);
+          }
+          return;
+        }
+
+        if (event === 'USER_UPDATED') {
+          console.log('👤 Dados do usuário atualizados');
+          if (session?.user) {
+            setUser(session.user);
+            await loadUserData(session.user.id);
+          }
+          return;
+        }
+
+        // Para qualquer outro evento, mantém o estado atual se houver sessão
+        if (session?.user) {
+          console.log('ℹ️ Evento desconhecido mas sessão válida - mantendo estado');
+          setUser(session.user);
+        } else {
+          console.warn('⚠️ Evento sem sessão:', event);
         }
       }
     );
