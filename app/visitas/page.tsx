@@ -1,56 +1,111 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Visita, CreateVisitaInput, UpdateVisitaInput } from '@/types/visitas';
+import VisitaModal from '@/components/VisitaModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ViewMode = 'dia' | '3dias' | 'semana' | 'mes';
 
 export default function VisitasPage() {
+  const { unidade } = useAuth();
   const [activeTab, setActiveTab] = useState<'historico' | 'proximas' | 'calendario'>('historico');
   const [viewMode, setViewMode] = useState<ViewMode>('semana');
+  const [visitas, setVisitas] = useState<Visita[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingVisita, setEditingVisita] = useState<Visita | null>(null);
 
-  // Mock data - será substituído por dados reais do Supabase
-  const visitasHistorico = [
-    {
-      id: '1',
-      estabelecimento: 'Clínica Veterinária da Villa',
-      endereco: 'Santos, SP',
-      data: '2025-10-15',
-      hora: '14:30',
-      status: 'concluida',
-      observacoes: 'Boa conversa com Dr. João. Interessado em novos produtos.',
-    },
-    {
-      id: '2',
-      estabelecimento: 'Pet Shop Amigo Fiel',
-      endereco: 'Santos, SP',
-      data: '2025-10-12',
-      hora: '10:00',
-      status: 'concluida',
-      observacoes: 'Pedido realizado. Retornar em 30 dias.',
-    },
-  ];
+  useEffect(() => {
+    fetchVisitas();
+  }, []);
 
-  const visitasProximas = [
-    {
-      id: '3',
-      estabelecimento: 'Hospital Veterinário 24h',
-      endereco: 'Guarujá, SP',
-      data: '2025-10-20',
-      hora: '15:00',
-      status: 'agendada',
-      observacoes: 'Levar catálogo de produtos premium.',
-    },
-    {
-      id: '4',
-      estabelecimento: 'Clínica Pet Care',
-      endereco: 'Santos, SP',
-      data: '2025-10-22',
-      hora: '11:00',
-      status: 'agendada',
-      observacoes: 'Apresentar novo sistema de cremação.',
-    },
-  ];
+  const fetchVisitas = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/visitas');
+      if (response.ok) {
+        const data = await response.json();
+        setVisitas(data);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar visitas:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateVisita = async (data: CreateVisitaInput) => {
+    const response = await fetch('/api/visitas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao criar visita');
+    }
+
+    await fetchVisitas();
+  };
+
+  const handleUpdateVisita = async (data: UpdateVisitaInput) => {
+    if (!editingVisita) return;
+
+    const response = await fetch(`/api/visitas/${editingVisita.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao atualizar visita');
+    }
+
+    await fetchVisitas();
+    setEditingVisita(null);
+  };
+
+  const handleDeleteVisita = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta visita?')) return;
+
+    try {
+      const response = await fetch(`/api/visitas/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchVisitas();
+      }
+    } catch (error) {
+      console.error('Erro ao deletar visita:', error);
+      alert('Erro ao deletar visita');
+    }
+  };
+
+  const handleMarcarRealizada = async (visita: Visita) => {
+    try {
+      const response = await fetch(`/api/visitas/${visita.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'realizada' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar visita');
+      }
+
+      await fetchVisitas();
+    } catch (error) {
+      console.error('Erro ao marcar visita como realizada:', error);
+      alert('Erro ao marcar visita como realizada');
+    }
+  };
+
+  // Filtrar visitas por status
+  const visitasHistorico = visitas.filter((v) => v.status === 'realizada');
+  const visitasProximas = visitas.filter((v) => v.status === 'agendada');
 
   return (
     <div className="space-y-6">
@@ -62,16 +117,28 @@ export default function VisitasPage() {
             Gerencie visitas realizadas e agendadas
           </p>
         </div>
-        <Link
-          href="/visitas/agendar"
+        <button
+          onClick={() => setIsModalOpen(true)}
           className="btn-primary flex items-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Agendar Visita
-        </Link>
+          Nova Visita
+        </button>
       </div>
+
+      {/* Modal */}
+      <VisitaModal
+        isOpen={isModalOpen || !!editingVisita}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingVisita(null);
+        }}
+        onSave={editingVisita ? handleUpdateVisita : handleCreateVisita}
+        visita={editingVisita}
+        unidadeId={unidade?.id || ''}
+      />
 
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700">
@@ -144,22 +211,26 @@ export default function VisitasPage() {
         {/* HISTÓRICO */}
         {activeTab === 'historico' && (
           <div className="space-y-4">
-            {visitasHistorico.length === 0 ? (
+            {loading ? (
+              <div className="card text-center py-12">
+                <p className="text-gray-500">Carregando visitas...</p>
+              </div>
+            ) : visitasHistorico.length === 0 ? (
               <div className="card text-center py-12">
                 <p className="text-gray-500">Nenhuma visita realizada ainda</p>
               </div>
             ) : (
               visitasHistorico.map((visita) => (
                 <div key={visita.id} className="card hover:shadow-lg transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-semibold text-foreground">
-                        {visita.estabelecimento}
+                        {visita.estabelecimentos?.nome || 'Estabelecimento'}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {visita.endereco}
+                        {visita.estabelecimentos?.endereco}, {visita.estabelecimentos?.cidade}
                       </p>
-                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
                         <div className="flex items-center gap-1">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
@@ -169,7 +240,7 @@ export default function VisitasPage() {
                               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                             />
                           </svg>
-                          {new Date(visita.data).toLocaleDateString('pt-BR')}
+                          {new Date(visita.data_visita).toLocaleDateString('pt-BR')}
                         </div>
                         <div className="flex items-center gap-1">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,8 +251,21 @@ export default function VisitasPage() {
                               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                             />
                           </svg>
-                          {visita.hora}
+                          {new Date(visita.data_visita).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </div>
+                        <span className="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700">
+                          {visita.tipo_visita}
+                        </span>
+                        {visita.temperatura_pos_visita && (
+                          <span className="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700">
+                            {visita.temperatura_pos_visita === 'quente' && '🔥'}
+                            {visita.temperatura_pos_visita === 'morno' && '🌤️'}
+                            {visita.temperatura_pos_visita === 'frio' && '❄️'}
+                          </span>
+                        )}
                       </div>
                       {visita.observacoes && (
                         <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
@@ -189,9 +273,38 @@ export default function VisitasPage() {
                         </p>
                       )}
                     </div>
-                    <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                      Concluída
-                    </span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        Realizada
+                      </span>
+                      <div className="relative group">
+                        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                          <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                          </svg>
+                        </button>
+                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 hidden group-hover:block z-10">
+                          <button
+                            onClick={() => setEditingVisita(visita)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVisita(visita.id)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))
@@ -202,22 +315,26 @@ export default function VisitasPage() {
         {/* PRÓXIMAS */}
         {activeTab === 'proximas' && (
           <div className="space-y-4">
-            {visitasProximas.length === 0 ? (
+            {loading ? (
+              <div className="card text-center py-12">
+                <p className="text-gray-500">Carregando visitas...</p>
+              </div>
+            ) : visitasProximas.length === 0 ? (
               <div className="card text-center py-12">
                 <p className="text-gray-500">Nenhuma visita agendada</p>
               </div>
             ) : (
               visitasProximas.map((visita) => (
                 <div key={visita.id} className="card hover:shadow-lg transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-semibold text-foreground">
-                        {visita.estabelecimento}
+                        {visita.estabelecimentos?.nome || 'Estabelecimento'}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {visita.endereco}
+                        {visita.estabelecimentos?.endereco}, {visita.estabelecimentos?.cidade}
                       </p>
-                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
                         <div className="flex items-center gap-1">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
@@ -227,7 +344,7 @@ export default function VisitasPage() {
                               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                             />
                           </svg>
-                          {new Date(visita.data).toLocaleDateString('pt-BR')}
+                          {new Date(visita.data_visita).toLocaleDateString('pt-BR')}
                         </div>
                         <div className="flex items-center gap-1">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,24 +355,66 @@ export default function VisitasPage() {
                               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                             />
                           </svg>
-                          {visita.hora}
+                          {new Date(visita.data_visita).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </div>
+                        <span className="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700">
+                          {visita.tipo_visita}
+                        </span>
                       </div>
+                      {visita.objetivo && (
+                        <p className="mt-3 text-sm text-gray-700 dark:text-gray-200 font-medium">
+                          <span className="text-gray-500">Objetivo:</span> {visita.objetivo}
+                        </p>
+                      )}
                       {visita.observacoes && (
-                        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                           {visita.observacoes}
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                         Agendada
                       </span>
-                      <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                        <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
-                      </button>
+                      <div className="relative group">
+                        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                          <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                          </svg>
+                        </button>
+                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 hidden group-hover:block z-10">
+                          <button
+                            onClick={() => setEditingVisita(visita)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleMarcarRealizada(visita)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-green-600 flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Marcar como Realizada
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVisita(visita.id)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

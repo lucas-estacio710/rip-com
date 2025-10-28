@@ -45,7 +45,7 @@ export default function Home() {
     async function loadStats() {
       try {
         console.log('📊 Iniciando carregamento de estatísticas...');
-        const { createClient } = await import('@/lib/supabase-client');
+        const { createClient } = await import('@/lib/supabase/client');
         const supabase = createClient();
 
         // Total de estabelecimentos

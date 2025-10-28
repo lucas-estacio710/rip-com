@@ -3,7 +3,7 @@
  * Usa Supabase como backend
  */
 
-import { createClient } from './supabase-client';
+import { createClient } from './supabase/client';
 import type { Estabelecimento } from './supabase';
 
 // ============================================

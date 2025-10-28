@@ -3,12 +3,16 @@
 import Link from 'next/link';
 import { use, useState, useEffect } from 'react';
 import type { Estabelecimento } from '@/lib/supabase';
+import { Visita, CreateVisitaInput } from '@/types/visitas';
+import VisitaModal from '@/components/VisitaModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function EstabelecimentoDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { unidade } = useAuth();
   const [activeTab, setActiveTab] = useState<
     'info' | 'contatos' | 'visitas' | 'indicacoes'
   >('info');
@@ -19,6 +23,11 @@ export default function EstabelecimentoDetailPage({
   // Estado para estabelecimento
   const [estabelecimento, setEstabelecimento] = useState<Estabelecimento | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Estado para visitas
+  const [visitas, setVisitas] = useState<Visita[]>([]);
+  const [loadingVisitas, setLoadingVisitas] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Carregar estabelecimento do Supabase
   useEffect(() => {
@@ -35,6 +44,60 @@ export default function EstabelecimentoDetailPage({
     }
     loadEstabelecimento();
   }, [id]);
+
+  // Carregar visitas quando a aba de visitas é ativada
+  useEffect(() => {
+    if (activeTab === 'visitas' && visitas.length === 0) {
+      fetchVisitas();
+    }
+  }, [activeTab]);
+
+  const fetchVisitas = async () => {
+    try {
+      setLoadingVisitas(true);
+      const response = await fetch(`/api/visitas?estabelecimento_id=${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setVisitas(data);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar visitas:', error);
+    } finally {
+      setLoadingVisitas(false);
+    }
+  };
+
+  const handleCreateVisita = async (data: CreateVisitaInput) => {
+    const response = await fetch('/api/visitas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao criar visita');
+    }
+
+    await fetchVisitas();
+    setIsModalOpen(false);
+  };
+
+  const handleDeleteVisita = async (visitaId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta visita?')) return;
+
+    try {
+      const response = await fetch(`/api/visitas/${visitaId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchVisitas();
+      }
+    } catch (error) {
+      console.error('Erro ao deletar visita:', error);
+      alert('Erro ao deletar visita');
+    }
+  };
 
   // Loading state
   if (loading) {
@@ -61,7 +124,6 @@ export default function EstabelecimentoDetailPage({
 
   // Mock: buscar dados relacionados (ainda em mock - migrar depois)
   const contatos: any[] = [];
-  const visitas: any[] = [];
   const indicacoes: any[] = [];
 
   const getTipoLabel = (tipo: string) => {
@@ -437,65 +499,160 @@ export default function EstabelecimentoDetailPage({
           {activeTab === 'visitas' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold">Histórico de Visitas</h3>
-                <Link
-                  href={`/visitas/nova?estabelecimento=${estabelecimento.id}`}
+                <h3 className="font-bold">Histórico de Visitas ({visitas.length})</h3>
+                <button
+                  onClick={() => setIsModalOpen(true)}
                   className="btn-primary text-sm"
                 >
+                  <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
                   Registrar Visita
-                </Link>
+                </button>
               </div>
 
-              {visitas.length === 0 ? (
+              {loadingVisitas ? (
                 <div className="text-center py-8 text-gray-500">
-                  Nenhuma visita registrada
+                  Carregando visitas...
+                </div>
+              ) : visitas.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <p className="mb-4">Nenhuma visita registrada</p>
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="btn-primary text-sm"
+                  >
+                    Registrar Primeira Visita
+                  </button>
                 </div>
               ) : (
-                visitas.map((visita) => (
-                  <div
-                    key={visita.id}
-                    className="p-4 border border-border rounded-lg"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="font-bold">{formatDate(visita.data)}</p>
-                        <p className="text-sm text-gray-500">
-                          Por: {visita.visitadoPor}
-                        </p>
+                <div className="space-y-3">
+                  {visitas.map((visita) => (
+                    <div
+                      key={visita.id}
+                      className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="font-bold">
+                            {new Date(visita.data_visita).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: 'long',
+                              year: 'numeric',
+                            })}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {new Date(visita.data_visita).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                            {visita.duracao_minutos && ` • ${visita.duracao_minutos} min`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {visita.status === 'realizada' ? (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              Realizada
+                            </span>
+                          ) : visita.status === 'agendada' ? (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              Agendada
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                              {visita.status}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleDeleteVisita(visita.id)}
+                            className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-red-600"
+                            title="Excluir visita"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          visita.clima === 'positivo'
-                            ? 'bg-success/10 text-success'
-                            : visita.clima === 'neutro'
-                            ? 'bg-gray-100 text-gray-600'
-                            : 'bg-danger/10 text-danger'
-                        }`}
-                      >
-                        {visita.clima}
-                      </span>
+
+                      <div className="space-y-2">
+                        {visita.tipo_visita && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-gray-500">Tipo:</span>
+                            <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700">
+                              {visita.tipo_visita}
+                            </span>
+                          </div>
+                        )}
+
+                        {visita.contato_realizado && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-gray-500">Contato:</span>
+                            <span>{visita.contato_realizado}</span>
+                            {visita.cargo_contato && <span className="text-gray-400">({visita.cargo_contato})</span>}
+                          </div>
+                        )}
+
+                        {visita.temperatura_pos_visita && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-gray-500">Temperatura:</span>
+                            <span>
+                              {visita.temperatura_pos_visita === 'quente' && '🔥 Quente'}
+                              {visita.temperatura_pos_visita === 'morno' && '🌤️ Morno'}
+                              {visita.temperatura_pos_visita === 'frio' && '❄️ Frio'}
+                            </span>
+                          </div>
+                        )}
+
+                        {visita.potencial_negocio && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-gray-500">Potencial:</span>
+                            <span>
+                              {visita.potencial_negocio === 'alto' && '⭐ Alto'}
+                              {visita.potencial_negocio === 'medio' && '📊 Médio'}
+                              {visita.potencial_negocio === 'baixo' && '📉 Baixo'}
+                            </span>
+                          </div>
+                        )}
+
+                        {visita.objetivo && (
+                          <div className="text-sm">
+                            <span className="text-gray-500">Objetivo: </span>
+                            <span>{visita.objetivo}</span>
+                          </div>
+                        )}
+
+                        {visita.observacoes && (
+                          <p className="text-sm text-gray-700 dark:text-gray-300 pt-2 border-t border-gray-200 dark:border-gray-700">
+                            {visita.observacoes}
+                          </p>
+                        )}
+
+                        {visita.proximos_passos && (
+                          <div className="text-sm bg-blue-50 dark:bg-blue-900/10 p-2 rounded">
+                            <span className="font-medium text-blue-700 dark:text-blue-400">Próximos passos:</span>
+                            <p className="text-gray-700 dark:text-gray-300 mt-1">{visita.proximos_passos}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                      {visita.assuntos}
-                    </p>
-
-                    {visita.amenidadesEntregues.length > 0 && (
-                      <div className="text-sm">
-                        <span className="text-gray-500">Amenidades: </span>
-                        {visita.amenidadesEntregues
-                          .map(
-                            (a) =>
-                              `${a.quantidade}x ${a.tipo}${
-                                a.descricao ? ` (${a.descricao})` : ''
-                              }`
-                          )
-                          .join(', ')}
-                      </div>
-                    )}
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
+
+              {/* Modal de Criar Visita */}
+              <VisitaModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSave={handleCreateVisita}
+                estabelecimentoId={estabelecimento.id}
+                unidadeId={unidade?.id || ''}
+              />
             </div>
           )}
 
