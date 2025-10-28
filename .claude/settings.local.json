@@ -22,7 +22,8 @@
       "Bash(cmd.exe //c taskkill //PID 8404 //F)",
       "Bash(next dev)",
       "Bash(npx next dev)",
-      "Bash(timeout /t 10 /nobreak)"
+      "Bash(timeout /t 10 /nobreak)",
+      "Bash(npm run version:minor:*)"
     ],
     "deny": [],
     "ask": []

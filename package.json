@@ -7,7 +7,10 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "import": "tsx scripts/importData.ts"
+    "import": "tsx scripts/importData.ts",
+    "version:patch": "tsx scripts/bump-version.ts patch",
+    "version:minor": "tsx scripts/bump-version.ts minor",
+    "version:major": "tsx scripts/bump-version.ts major"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
