@@ -191,7 +191,9 @@ function AdicionarPorLinkContent() {
       console.log('🔄 Iniciando salvamento...');
 
       // Importa função do banco
+      console.log('📦 Importando função createEstabelecimento...');
       const { createEstabelecimento } = await import('@/lib/db');
+      console.log('✅ Função importada');
 
       // Cria novo estabelecimento
       const novoEstabelecimento = {
@@ -218,8 +220,17 @@ function AdicionarPorLinkContent() {
 
       console.log('📝 Dados a serem salvos:', novoEstabelecimento);
 
-      // Salva no Supabase
-      const saved = await createEstabelecimento(novoEstabelecimento);
+      // Timeout wrapper - 30 segundos
+      console.log('⏱️ Iniciando salvamento com timeout de 30s...');
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout: operação demorou mais de 30 segundos')), 30000)
+      );
+
+      // Salva no Supabase com timeout
+      const saved = await Promise.race([
+        createEstabelecimento(novoEstabelecimento),
+        timeoutPromise
+      ]);
 
       console.log('✅ Resultado:', saved);
 

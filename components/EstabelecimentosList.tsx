@@ -15,19 +15,10 @@ export default function EstabelecimentosList() {
 
   // Carregar estabelecimentos do Supabase
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-
     async function loadEstabelecimentos() {
       try {
         console.time('⏱️ Carregamento de estabelecimentos');
         console.log('🔄 Iniciando carregamento...');
-
-        // Timeout de 10 segundos para detectar travamentos
-        timeoutId = setTimeout(() => {
-          console.error('⏰ TIMEOUT: Query demorou mais de 10 segundos!');
-          setError('Tempo esgotado ao carregar estabelecimentos. Verifique sua conexão e autenticação.');
-          setLoading(false);
-        }, 10000);
 
         const { getAllEstabelecimentos } = await import('@/lib/db');
         console.log('✅ Módulo importado');
@@ -35,13 +26,11 @@ export default function EstabelecimentosList() {
         const data = await getAllEstabelecimentos();
         console.log('✅ Dados recebidos:', data?.length || 0, 'estabelecimentos');
 
-        clearTimeout(timeoutId);
         setEstabelecimentos(data);
         setError(null);
         console.timeEnd('⏱️ Carregamento de estabelecimentos');
       } catch (error) {
         console.error('❌ Erro ao carregar estabelecimentos:', error);
-        clearTimeout(timeoutId);
         setError('Erro ao carregar estabelecimentos. Verifique o console para mais detalhes.');
       } finally {
         setLoading(false);
@@ -49,10 +38,6 @@ export default function EstabelecimentosList() {
     }
 
     loadEstabelecimentos();
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
   }, []);
 
   // Filtrar estabelecimentos

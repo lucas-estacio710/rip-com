@@ -71,19 +71,45 @@ export async function getEstabelecimentoById(id: string): Promise<Estabeleciment
 }
 
 export async function createEstabelecimento(estabelecimento: Omit<Estabelecimento, 'id' | 'criado_em' | 'atualizado_em'>): Promise<Estabelecimento | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('estabelecimentos')
-    .insert([estabelecimento])
-    .select()
-    .single();
+  try {
+    console.log('🔌 [createEstabelecimento] Criando cliente Supabase...');
+    const supabase = createClient();
 
-  if (error) {
-    console.error('Erro ao criar estabelecimento:', error);
+    // Verificar se há sessão ativa
+    console.log('🔐 [createEstabelecimento] Verificando sessão...');
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      console.error('❌ [createEstabelecimento] Sem sessão ativa! RLS vai bloquear.');
+      throw new Error('Usuário não autenticado');
+    }
+
+    console.log('✅ [createEstabelecimento] Sessão ativa:', session.user.email);
+    console.log('📡 [createEstabelecimento] Inserindo no banco...');
+
+    const { data, error } = await supabase
+      .from('estabelecimentos')
+      .insert([estabelecimento])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ [createEstabelecimento] Erro ao inserir:', error);
+      console.error('❌ [createEstabelecimento] Detalhes:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      throw error;
+    }
+
+    console.log('✅ [createEstabelecimento] Estabelecimento criado com sucesso!', data);
+    return data;
+  } catch (error) {
+    console.error('💥 [createEstabelecimento] Erro crítico:', error);
     throw error;
   }
-
-  return data;
 }
 
 export async function updateEstabelecimento(id: string, updates: Partial<Omit<Estabelecimento, 'id' | 'criado_em' | 'atualizado_em'>>): Promise<Estabelecimento | null> {
