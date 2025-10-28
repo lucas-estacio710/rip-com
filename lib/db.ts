@@ -73,34 +73,72 @@ export async function createEstabelecimento(estabelecimento: Omit<Estabeleciment
     console.log('🔌 [createEstabelecimento] Criando cliente Supabase...');
     const supabase = createClient();
 
+    // TESTE: Verificar se a sessão está ativa ANTES de tentar inserir
+    console.log('🔐 [createEstabelecimento] Verificando sessão...');
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error('❌ [createEstabelecimento] Erro ao obter sessão:', sessionError);
+      throw new Error('Erro ao verificar sessão. Faça login novamente.');
+    }
+
+    if (!sessionData.session) {
+      console.error('❌ [createEstabelecimento] Sessão não encontrada');
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+
+    console.log('✅ [createEstabelecimento] Sessão ativa:', {
+      user: sessionData.session.user.email,
+      expiresAt: new Date(sessionData.session.expires_at! * 1000).toISOString(),
+    });
+
     console.log('📡 [createEstabelecimento] Inserindo no banco...');
     console.log('📝 [createEstabelecimento] Dados:', estabelecimento);
 
-    const { data, error } = await supabase
-      .from('estabelecimentos')
-      .insert([estabelecimento])
-      .select()
-      .single();
+    // Usar AbortController para timeout mais controlado
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.error('⏰ [createEstabelecimento] TIMEOUT: Abortando requisição após 10s');
+      controller.abort();
+    }, 10000); // 10 segundos
 
-    if (error) {
-      console.error('❌ [createEstabelecimento] Erro ao inserir:', error);
-      console.error('❌ [createEstabelecimento] Detalhes:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      });
+    try {
+      const { data, error } = await supabase
+        .from('estabelecimentos')
+        .insert([estabelecimento])
+        .select()
+        .single()
+        .abortSignal(controller.signal);
 
-      // Se for erro de autenticação, mensagem mais clara
-      if (error.code === 'PGRST301' || error.message.includes('JWT')) {
-        throw new Error('Sessão expirada. Faça login novamente.');
+      clearTimeout(timeoutId);
+
+      if (error) {
+        console.error('❌ [createEstabelecimento] Erro ao inserir:', error);
+        console.error('❌ [createEstabelecimento] Detalhes:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+
+        // Se for erro de autenticação, mensagem mais clara
+        if (error.code === 'PGRST301' || error.message.includes('JWT')) {
+          throw new Error('Sessão expirada. Faça login novamente.');
+        }
+
+        throw error;
       }
 
-      throw error;
+      console.log('✅ [createEstabelecimento] Estabelecimento criado com sucesso!', data);
+      return data;
+    } catch (abortError: any) {
+      clearTimeout(timeoutId);
+      if (abortError.name === 'AbortError') {
+        console.error('❌ [createEstabelecimento] Requisição abortada por timeout');
+        throw new Error('Timeout ao inserir estabelecimento. Verifique sua conexão.');
+      }
+      throw abortError;
     }
-
-    console.log('✅ [createEstabelecimento] Estabelecimento criado com sucesso!', data);
-    return data;
   } catch (error) {
     console.error('💥 [createEstabelecimento] Erro crítico:', error);
     throw error;

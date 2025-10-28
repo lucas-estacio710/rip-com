@@ -24,7 +24,8 @@
       "Bash(npx next dev)",
       "Bash(timeout /t 10 /nobreak)",
       "Bash(npm run version:minor:*)",
-      "Bash(npm run version:patch:*)"
+      "Bash(npm run version:patch:*)",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []
