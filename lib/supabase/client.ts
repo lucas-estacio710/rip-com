@@ -1,7 +1,20 @@
 import { createBrowserClient } from '@supabase/ssr'
 
+// Cache do cliente para evitar múltiplas instâncias
+let supabaseClient: ReturnType<typeof createBrowserClient> | null = null;
+
 export function createClient() {
-  return createBrowserClient(
+  // Se já existe um cliente, reutiliza
+  if (supabaseClient) {
+    console.log('🔄 Reutilizando cliente Supabase existente');
+    return supabaseClient;
+  }
+
+  console.log('🆕 Criando NOVO cliente Supabase');
+  console.log('📍 URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log('🔑 Key presente:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+  supabaseClient = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -19,5 +32,9 @@ export function createClient() {
         },
       },
     }
-  )
+  );
+
+  console.log('✅ Cliente Supabase criado com sucesso');
+
+  return supabaseClient;
 }
