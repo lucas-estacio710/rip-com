@@ -15,15 +15,6 @@ export async function getAllEstabelecimentos(): Promise<Estabelecimento[]> {
     console.log('🔌 Criando cliente Supabase...');
     const supabase = createClient();
 
-    // Verificar se há sessão ativa
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('🔐 Sessão ativa:', session ? 'SIM' : 'NÃO');
-
-    if (!session) {
-      console.error('❌ Sem sessão ativa! RLS vai bloquear a query.');
-      throw new Error('Usuário não autenticado');
-    }
-
     console.log('📡 Fazendo query ao Supabase...');
     const startTime = Date.now();
 
@@ -43,6 +34,13 @@ export async function getAllEstabelecimentos(): Promise<Estabelecimento[]> {
         hint: error.hint,
         code: error.code,
       });
+
+      // Se for erro de autenticação, mensagem mais clara
+      if (error.code === 'PGRST301' || error.message.includes('JWT')) {
+        console.error('❌ Sessão expirada - redirecionando para login');
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
       throw error;
     }
 
@@ -75,17 +73,8 @@ export async function createEstabelecimento(estabelecimento: Omit<Estabeleciment
     console.log('🔌 [createEstabelecimento] Criando cliente Supabase...');
     const supabase = createClient();
 
-    // Verificar se há sessão ativa
-    console.log('🔐 [createEstabelecimento] Verificando sessão...');
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      console.error('❌ [createEstabelecimento] Sem sessão ativa! RLS vai bloquear.');
-      throw new Error('Usuário não autenticado');
-    }
-
-    console.log('✅ [createEstabelecimento] Sessão ativa:', session.user.email);
     console.log('📡 [createEstabelecimento] Inserindo no banco...');
+    console.log('📝 [createEstabelecimento] Dados:', estabelecimento);
 
     const { data, error } = await supabase
       .from('estabelecimentos')
@@ -101,6 +90,12 @@ export async function createEstabelecimento(estabelecimento: Omit<Estabeleciment
         hint: error.hint,
         code: error.code,
       });
+
+      // Se for erro de autenticação, mensagem mais clara
+      if (error.code === 'PGRST301' || error.message.includes('JWT')) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
       throw error;
     }
 
