@@ -255,7 +255,7 @@ export default function EstabelecimentoDetailPage({
               </div>
             </div>
           </div>
-        )
+        )}
 
         {/* Profile Section */}
         <div className="flex gap-4">
