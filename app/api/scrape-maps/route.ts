@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Gera URL do Google Street View
-function getStreetViewUrl(latitude: number, longitude: number, size: string = '600x400'): string {
+// Verifica se existe Street View para a localização e retorna a URL
+async function getStreetViewUrl(latitude: number, longitude: number, size: string = '600x400'): Promise<string> {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) return '';
-  return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${latitude},${longitude}&key=${apiKey}`;
+
+  // Verifica se existe imagem do Street View nessa localização
+  const metadataUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${latitude},${longitude}&key=${apiKey}`;
+
+  try {
+    const response = await fetch(metadataUrl);
+    const data = await response.json();
+
+    // Só retorna URL se houver imagem disponível
+    if (data.status === 'OK') {
+      return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${latitude},${longitude}&key=${apiKey}`;
+    }
+  } catch (error) {
+    console.error('Erro ao verificar Street View:', error);
+  }
+
+  return ''; // Sem cobertura do Street View
 }
 
 export async function POST(request: NextRequest) {
@@ -218,9 +234,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Gera URL do Street View se tiver coordenadas
+    // Gera URL do Street View se tiver coordenadas (verifica se existe cobertura)
     if (data.latitude && data.longitude) {
-      data.streetViewUrl = getStreetViewUrl(data.latitude, data.longitude);
+      data.streetViewUrl = await getStreetViewUrl(data.latitude, data.longitude);
     }
 
     return NextResponse.json({
