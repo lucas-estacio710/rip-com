@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { APP_VERSION } from '@/lib/version';
 
 // Mensagens de erro baseadas no query param
 const ERROR_MESSAGES: Record<string, string> = {
@@ -80,6 +81,9 @@ function LoginForm() {
           <h1 className="text-2xl font-bold text-foreground">R.I.P. Pet CRM</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Faça login para acessar o sistema
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
+            v{APP_VERSION}
           </p>
         </div>
 
