@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { use, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Estabelecimento } from '@/lib/supabase';
 import { Visita, CreateVisitaInput } from '@/types/visitas';
 import VisitaModal from '@/components/VisitaModal';
@@ -13,6 +14,7 @@ export default function EstabelecimentoDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { unidade } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     'info' | 'contatos' | 'visitas' | 'indicacoes'
   >('info');
@@ -23,6 +25,8 @@ export default function EstabelecimentoDetailPage({
   // Estado para estabelecimento
   const [estabelecimento, setEstabelecimento] = useState<Estabelecimento | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Estado para visitas
   const [visitas, setVisitas] = useState<Visita[]>([]);
@@ -198,13 +202,60 @@ export default function EstabelecimentoDetailPage({
             </svg>
           </Link>
 
-          <Link
-            href={`/estabelecimentos/${estabelecimento.id}/editar`}
-            className="btn-primary"
-          >
-            Editar Perfil
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href={`/estabelecimentos/${estabelecimento.id}/editar`}
+              className="btn-primary"
+            >
+              Editar
+            </Link>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Excluir
+            </button>
+          </div>
         </div>
+
+        {/* Modal de confirmação de exclusão */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-bold mb-4">Confirmar Exclusão</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Tem certeza que deseja excluir <strong>{estabelecimento.nome}</strong>? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                  disabled={deleting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    setDeleting(true);
+                    try {
+                      const { deleteEstabelecimento } = await import('@/lib/db');
+                      await deleteEstabelecimento(estabelecimento.id);
+                      router.push('/estabelecimentos');
+                    } catch (error) {
+                      console.error('Erro ao excluir:', error);
+                      alert('Erro ao excluir estabelecimento');
+                      setDeleting(false);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  disabled={deleting}
+                >
+                  {deleting ? 'Excluindo...' : 'Excluir'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
 
         {/* Profile Section */}
         <div className="flex gap-4">
