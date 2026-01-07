@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+
 // Verifica se existe Street View para a localização e retorna a URL
 async function getStreetViewUrl(latitude: number, longitude: number, size: string = '600x400'): Promise<string> {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) return '';
+  if (!API_KEY) return '';
 
   // Verifica se existe imagem do Street View nessa localização
-  const metadataUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${latitude},${longitude}&key=${apiKey}`;
+  const metadataUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${latitude},${longitude}&key=${API_KEY}`;
 
   try {
     const response = await fetch(metadataUrl);
@@ -14,13 +15,49 @@ async function getStreetViewUrl(latitude: number, longitude: number, size: strin
 
     // Só retorna URL se houver imagem disponível
     if (data.status === 'OK') {
-      return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${latitude},${longitude}&key=${apiKey}`;
+      return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${latitude},${longitude}&key=${API_KEY}`;
     }
   } catch (error) {
     console.error('Erro ao verificar Street View:', error);
   }
 
   return ''; // Sem cobertura do Street View
+}
+
+// Busca todas as fotos de um lugar via Places API
+async function getPlacePhotos(placeId: string): Promise<string[]> {
+  if (!API_KEY) return [];
+
+  try {
+    // Busca detalhes do lugar incluindo fotos
+    const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${API_KEY}`;
+    const response = await fetch(detailsUrl);
+    const data = await response.json();
+
+    if (data.status === 'OK' && data.result?.photos) {
+      // Retorna URLs de até 10 fotos
+      return data.result.photos.slice(0, 10).map((photo: any) =>
+        `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photo.photo_reference}&key=${API_KEY}`
+      );
+    }
+  } catch (error) {
+    console.error('Erro ao buscar fotos:', error);
+  }
+
+  return [];
+}
+
+// Extrai place_id da URL do Google Maps
+function extractPlaceId(url: string): string | null {
+  // Formato: !1s0x94ce0314fcfd851d:0xd7fefcf78f26ff40
+  const match = url.match(/!1s(0x[a-f0-9]+:0x[a-f0-9]+)/i);
+  if (match) return match[1];
+
+  // Formato alternativo com place_id=
+  const placeIdMatch = url.match(/place_id=([^&]+)/);
+  if (placeIdMatch) return placeIdMatch[1];
+
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -237,6 +274,15 @@ export async function POST(request: NextRequest) {
     // Gera URL do Street View se tiver coordenadas (verifica se existe cobertura)
     if (data.latitude && data.longitude) {
       data.streetViewUrl = await getStreetViewUrl(data.latitude, data.longitude);
+    }
+
+    // Busca todas as fotos do Google Places
+    const placeId = extractPlaceId(normalizedUrl);
+    if (placeId) {
+      const placePhotos = await getPlacePhotos(placeId);
+      if (placePhotos.length > 0) {
+        data.allPhotos = placePhotos;
+      }
     }
 
     return NextResponse.json({

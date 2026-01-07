@@ -147,12 +147,22 @@ function AdicionarPorLinkContent() {
 
         // Coleta todas as fotos disponíveis
         const fotos: {url: string, tipo: string}[] = [];
+
+        // Street View primeiro (se disponível)
         if (data.streetViewUrl) {
           fotos.push({ url: data.streetViewUrl, tipo: 'Street View' });
         }
-        if (data.fotoUrl) {
+
+        // Todas as fotos do Google Places
+        if (data.allPhotos && data.allPhotos.length > 0) {
+          data.allPhotos.forEach((url: string, index: number) => {
+            fotos.push({ url, tipo: `Foto ${index + 1}` });
+          });
+        } else if (data.fotoUrl) {
+          // Fallback para foto única se não tiver allPhotos
           fotos.push({ url: data.fotoUrl, tipo: 'Google Places' });
         }
+
         setFotosDisponiveis(fotos);
 
         // Seleciona a primeira foto como padrão
