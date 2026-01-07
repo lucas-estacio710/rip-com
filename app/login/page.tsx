@@ -1,17 +1,33 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function LoginPage() {
+// Mensagens de erro baseadas no query param
+const ERROR_MESSAGES: Record<string, string> = {
+  session_expired: 'Sua sessão expirou ou não foi possível conectar. Faça login novamente.',
+  profile_not_found: 'Não foi possível carregar seu perfil. Tente novamente.',
+};
+
+// Componente interno que usa searchParams
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signIn } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Verifica se há erro na URL
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam && ERROR_MESSAGES[errorParam]) {
+      setError(ERROR_MESSAGES[errorParam]);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,5 +164,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Página principal com Suspense para useSearchParams
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

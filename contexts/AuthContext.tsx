@@ -16,64 +16,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const supabase = createClient();
 
-  // Carrega perfil e unidade do usuário
-  const loadUserData = async (userId: string) => {
+  // Carrega perfil e unidade do usuário com timeout
+  const loadUserData = async (userId: string): Promise<boolean> => {
     // Previne múltiplas chamadas simultâneas
     if (isLoadingData) {
       console.log('⏸️ Já carregando dados, aguardando...');
-      return;
+      return false;
     }
 
     setIsLoadingData(true);
 
+    // Helper para adicionar timeout a uma promise
+    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
+      return Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error('TIMEOUT')), ms)
+        ),
+      ]);
+    };
+
     try {
       console.log('📥 Carregando dados do usuário:', userId);
 
-      // Buscar perfil
-      const { data: perfilData, error: perfilError } = await supabase
-        .from('perfis')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      // Buscar perfil com timeout de 10s
+      const { data: perfilData, error: perfilError } = await withTimeout(
+        supabase
+          .from('perfis')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle(),
+        10000
+      );
 
       if (perfilError) {
         console.error('❌ Erro ao carregar perfil:', perfilError);
-        // Não limpa o perfil em caso de erro - pode ser temporário
         if (perfilError.code === 'PGRST116') {
-          // Perfil não existe - limpa
           setPerfil(null);
         }
-        return;
+        return false;
       }
 
       if (!perfilData) {
         console.warn('⚠️ Perfil não encontrado');
         setPerfil(null);
-        return;
+        return false;
       }
 
       setPerfil(perfilData);
       console.log('✅ Perfil carregado');
 
-      // Buscar unidade se o perfil tiver uma
+      // Buscar unidade se o perfil tiver uma (com timeout de 10s)
       if (perfilData?.unidade_id) {
-        const { data: unidadeData, error: unidadeError } = await supabase
-          .from('unidades')
-          .select('*')
-          .eq('id', perfilData.unidade_id)
-          .maybeSingle();
+        try {
+          const { data: unidadeData, error: unidadeError } = await withTimeout(
+            supabase
+              .from('unidades')
+              .select('*')
+              .eq('id', perfilData.unidade_id)
+              .maybeSingle(),
+            10000
+          );
 
-        if (unidadeError) {
-          console.error('❌ Erro ao carregar unidade:', unidadeError);
-          // Não limpa em caso de erro
-        } else if (unidadeData) {
-          setUnidade(unidadeData);
-          console.log('✅ Unidade carregada:', unidadeData.nome);
+          if (unidadeError) {
+            console.error('❌ Erro ao carregar unidade:', unidadeError);
+          } else if (unidadeData) {
+            setUnidade(unidadeData);
+            console.log('✅ Unidade carregada:', unidadeData.nome);
+          }
+        } catch (unidadeError) {
+          console.error('❌ Timeout ao carregar unidade:', unidadeError);
+          // Continua mesmo sem unidade
         }
       }
-    } catch (error) {
-      console.error('💥 Erro ao carregar dados do usuário:', error);
-      // Não limpa dados em caso de erro de rede
+
+      return true; // Sucesso
+    } catch (error: any) {
+      if (error?.message === 'TIMEOUT') {
+        console.error('⏱️ TIMEOUT ao carregar perfil - sessão será encerrada');
+      } else {
+        console.error('💥 Erro ao carregar dados do usuário:', error);
+      }
+      return false;
     } finally {
       setIsLoadingData(false);
     }
@@ -91,7 +115,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           console.log('✅ Sessão local encontrada:', session.user.email);
           setUser(session.user);
-          await loadUserData(session.user.id);
+
+          // Tenta carregar dados do usuário com timeout
+          const success = await loadUserData(session.user.id);
+
+          if (!success) {
+            // Se não conseguiu carregar perfil, faz logout forçado
+            console.warn('⚠️ Não foi possível carregar perfil - fazendo logout');
+            await supabase.auth.signOut();
+            setUser(null);
+            setPerfil(null);
+            setUnidade(null);
+            router.push('/login?error=session_expired');
+          }
         } else {
           console.log('ℹ️ Nenhuma sessão local encontrada');
           setUser(null);
@@ -139,7 +175,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('✅ Login bem-sucedido:', session?.user?.email);
           if (session?.user) {
             setUser(session.user);
-            await loadUserData(session.user.id);
+            const success = await loadUserData(session.user.id);
+            if (!success) {
+              console.warn('⚠️ Login OK mas perfil não carregou - fazendo logout');
+              await supabase.auth.signOut();
+              setUser(null);
+              setPerfil(null);
+              setUnidade(null);
+              router.push('/login?error=profile_not_found');
+            }
           }
           return;
         }

@@ -11,8 +11,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normaliza a URL: adiciona https:// se não tiver protocolo
+    let normalizedUrl = url.trim();
+    if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+      normalizedUrl = 'https://' + normalizedUrl;
+    }
+
+    console.log('🔗 URL original:', url);
+    console.log('🔗 URL normalizada:', normalizedUrl);
+
     // Faz fetch da página do Google Maps
-    const response = await fetch(url, {
+    const response = await fetch(normalizedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -84,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Coordenadas - extrai da URL primeiro (mais confiável)
-    const coordMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const coordMatch = normalizedUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
     if (coordMatch) {
       data.latitude = parseFloat(coordMatch[1]);
       data.longitude = parseFloat(coordMatch[2]);
