@@ -99,7 +99,7 @@ export default function MapView() {
           <p className="text-gray-500 mb-6">
             Adicione coordenadas aos estabelecimentos para visualizá-los no mapa
           </p>
-          <Link href="/estabelecimentos/adicionar-link" className="btn-primary">
+          <Link href="/estabelecimentos/buscar" className="btn-primary">
             Adicionar Estabelecimento
           </Link>
         </div>

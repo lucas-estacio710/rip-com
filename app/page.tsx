@@ -311,7 +311,7 @@ export default function Home() {
         <h2 className="text-lg font-bold mb-4">Ações Rápidas</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Link
-            href="/estabelecimentos/adicionar-link"
+            href="/estabelecimentos/buscar"
             className="flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary hover:bg-primary/5 transition-all"
           >
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">

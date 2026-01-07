@@ -348,7 +348,7 @@ export default function EstabelecimentosList() {
           <p className="text-gray-500 mb-6">
             Tente ajustar os filtros ou adicione um novo estabelecimento
           </p>
-          <Link href="/estabelecimentos/adicionar-link" className="btn-primary">
+          <Link href="/estabelecimentos/buscar" className="btn-primary">
             Adicionar Estabelecimento
           </Link>
         </div>

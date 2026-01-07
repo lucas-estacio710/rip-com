@@ -18,22 +18,11 @@ function ShareHandlerContent() {
 
         console.log('Recebido compartilhamento:', { title, text, url });
 
-        // Se tem URL do Google Maps, redireciona para página de adicionar
-        if (url && (url.includes('google.com/maps') || url.includes('goo.gl'))) {
-          setStatus('success');
-
-          // Aguarda 1 segundo para mostrar mensagem de sucesso
-          setTimeout(() => {
-            // Redireciona para a página de adicionar com a URL como parâmetro
-            router.push(`/estabelecimentos/adicionar-link?url=${encodeURIComponent(url)}`);
-          }, 1000);
-        } else {
-          // Se não é um link do Google Maps, apenas redireciona para estabelecimentos
-          setStatus('error');
-          setTimeout(() => {
-            router.push('/estabelecimentos');
-          }, 2000);
-        }
+        // Redireciona para página de busca
+        setStatus('success');
+        setTimeout(() => {
+          router.push('/estabelecimentos/buscar');
+        }, 1000);
       } catch (error) {
         console.error('Erro ao processar compartilhamento:', error);
         setStatus('error');

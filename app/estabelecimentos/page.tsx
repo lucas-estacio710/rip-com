@@ -124,7 +124,7 @@ export default function EstabelecimentosPage() {
           </p>
         </div>
         <Link
-          href="/estabelecimentos/adicionar-link"
+          href="/estabelecimentos/buscar"
           className="btn-primary inline-flex items-center justify-center space-x-2"
         >
           <svg
