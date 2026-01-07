@@ -147,6 +147,11 @@ export function createClient() {
             limitVal = 1;
             return builder;
           },
+          order: (column: string, options?: { ascending?: boolean }) => {
+            const direction = options?.ascending === false ? 'desc' : 'asc';
+            filters.push(`order=${column}.${direction}`);
+            return builder;
+          },
           then: async (resolve: any) => {
             let finalUrl = url;
             if (filters.length > 0) {
