@@ -157,6 +157,25 @@ export default function BuscarEstabelecimentoPage() {
     setIsSaving(true);
 
     try {
+      // Se tem foto, faz upload pro Supabase Storage primeiro
+      let fotoUrl = null;
+      if (selectedPlace.foto) {
+        console.log('📸 Fazendo upload da foto...');
+        const uploadRes = await fetch('/api/upload-foto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fotoUrl: selectedPlace.foto }),
+        });
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          fotoUrl = uploadData.url;
+          console.log('✅ Foto salva no Supabase:', fotoUrl);
+        } else {
+          console.warn('⚠️ Falha no upload da foto, salvando sem foto');
+        }
+      }
+
       // Importa função do banco
       const { createEstabelecimento } = await import('@/lib/db');
 
@@ -179,7 +198,7 @@ export default function BuscarEstabelecimentoPage() {
         longitude: selectedPlace.longitude || null,
         relacionamento,
         observacoes: observacoes || null,
-        fotos: selectedPlace.foto ? [selectedPlace.foto] : null,
+        fotos: fotoUrl ? [fotoUrl] : null,
         ultima_visita: null,
       };
 

@@ -136,6 +136,29 @@ export default function EditarEstabelecimentoPage({
 
     setSaving(true);
     try {
+      // Se a foto mudou e é do Google, faz upload pro Supabase Storage
+      let fotoFinal = fotoSelecionada;
+      if (fotoSelecionada && fotoSelecionada !== fotoAtual) {
+        // Só faz upload se for URL do Google (não do Supabase)
+        if (fotoSelecionada.includes('googleapis.com')) {
+          console.log('📸 Fazendo upload da nova foto...');
+          const uploadRes = await fetch('/api/upload-foto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fotoUrl: fotoSelecionada, estabelecimentoId: id }),
+          });
+
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            fotoFinal = uploadData.url;
+            console.log('✅ Foto salva no Supabase:', fotoFinal);
+          } else {
+            console.warn('⚠️ Falha no upload, mantendo foto anterior');
+            fotoFinal = fotoAtual;
+          }
+        }
+      }
+
       const { updateEstabelecimento } = await import('@/lib/db');
 
       const updated = await updateEstabelecimento(id, {
@@ -152,7 +175,7 @@ export default function EditarEstabelecimentoPage({
         horario_funcionamento: horarioFuncionamento || null,
         relacionamento,
         observacoes: observacoes || null,
-        fotos: fotoSelecionada ? [fotoSelecionada] : null,
+        fotos: fotoFinal ? [fotoFinal] : null,
       });
 
       if (updated) {
