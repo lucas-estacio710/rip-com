@@ -143,7 +143,12 @@ function AdicionarPorLinkContent() {
         if (data.horarioFuncionamento) setHorarioFuncionamento(data.horarioFuncionamento);
         if (data.latitude) setLatitude(data.latitude);
         if (data.longitude) setLongitude(data.longitude);
-        if (data.fotoUrl) setFotoUrl(data.fotoUrl);
+        // Prioriza Street View sobre foto do Google Places
+        if (data.streetViewUrl) {
+          setFotoUrl(data.streetViewUrl);
+        } else if (data.fotoUrl) {
+          setFotoUrl(data.fotoUrl);
+        }
 
         // Infere o tipo
         if (data.nome) {
@@ -296,7 +301,7 @@ function AdicionarPorLinkContent() {
                 {horarioFuncionamento && <p>✓ Horário: {horarioFuncionamento}</p>}
                 {latitude && longitude && <p>✓ Coordenadas: {latitude.toFixed(4)}, {longitude.toFixed(4)}</p>}
                 {extractedRating && <p>✓ Avaliação Google: {extractedRating} estrelas</p>}
-                {fotoUrl && <p>✓ Foto do estabelecimento extraída</p>}
+                {fotoUrl && <p>✓ Foto do Street View extraída</p>}
               </div>
               {fotoUrl && (
                 <div className="mt-3">

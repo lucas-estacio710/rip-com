@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Gera URL do Google Street View
+function getStreetViewUrl(latitude: number, longitude: number, size: string = '600x400'): string {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return '';
+  return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${latitude},${longitude}&key=${apiKey}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json();
@@ -209,6 +216,11 @@ export async function POST(request: NextRequest) {
         data.cidade = 'Santos';
         data.estado = 'SP';
       }
+    }
+
+    // Gera URL do Street View se tiver coordenadas
+    if (data.latitude && data.longitude) {
+      data.streetViewUrl = getStreetViewUrl(data.latitude, data.longitude);
     }
 
     return NextResponse.json({
