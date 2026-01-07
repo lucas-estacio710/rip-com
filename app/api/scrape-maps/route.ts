@@ -225,9 +225,16 @@ export async function POST(request: NextRequest) {
       data.streetViewUrl = getStreetViewUrl(data.latitude, data.longitude);
     }
 
+    // Debug: mostra se a API key foi encontrada
+    const hasApiKey = !!(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY);
+
     return NextResponse.json({
       success: true,
-      data
+      data,
+      debug: {
+        hasApiKey,
+        envKeys: Object.keys(process.env).filter(k => k.includes('GOOGLE')).join(', ') || 'nenhuma'
+      }
     });
 
   } catch (error) {
