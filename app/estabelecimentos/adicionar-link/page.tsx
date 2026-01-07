@@ -148,11 +148,6 @@ function AdicionarPorLinkContent() {
         // Coleta todas as fotos disponíveis
         const fotos: {url: string, tipo: string}[] = [];
 
-        // Street View primeiro (se disponível)
-        if (data.streetViewUrl) {
-          fotos.push({ url: data.streetViewUrl, tipo: 'Street View' });
-        }
-
         // Todas as fotos do Google Places
         if (data.allPhotos && data.allPhotos.length > 0) {
           data.allPhotos.forEach((url: string, index: number) => {

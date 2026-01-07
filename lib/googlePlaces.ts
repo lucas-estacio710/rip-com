@@ -193,16 +193,3 @@ export function inferEstabelecimentoTipo(googleTypes: string[], nome: string): s
 
   return 'clinica'; // Padrão
 }
-
-/**
- * Gera URL do Google Street View para um estabelecimento
- */
-export function getStreetViewUrl(latitude: number, longitude: number, size: string = '400x300'): string {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-  if (!apiKey) {
-    return '';
-  }
-
-  return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${latitude},${longitude}&key=${apiKey}`;
-}

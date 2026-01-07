@@ -94,17 +94,6 @@ export default function EditarEstabelecimentoPage({
       const data = await response.json();
       const fotos: {url: string, tipo: string}[] = [];
 
-      // Se tem coordenadas, busca Street View
-      if (latitude && longitude) {
-        const streetViewRes = await fetch(`/api/places/streetview?lat=${latitude}&lng=${longitude}`);
-        if (streetViewRes.ok) {
-          const svData = await streetViewRes.json();
-          if (svData.url) {
-            fotos.push({ url: svData.url, tipo: 'Street View' });
-          }
-        }
-      }
-
       // Adiciona fotos dos resultados
       if (data.results && data.results.length > 0) {
         // Busca detalhes do primeiro resultado para pegar mais fotos

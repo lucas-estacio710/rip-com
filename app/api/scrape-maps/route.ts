@@ -2,28 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
 
-// Verifica se existe Street View para a localização e retorna a URL
-async function getStreetViewUrl(latitude: number, longitude: number, size: string = '600x400'): Promise<string> {
-  if (!API_KEY) return '';
-
-  // Verifica se existe imagem do Street View nessa localização
-  const metadataUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${latitude},${longitude}&key=${API_KEY}`;
-
-  try {
-    const response = await fetch(metadataUrl);
-    const data = await response.json();
-
-    // Só retorna URL se houver imagem disponível
-    if (data.status === 'OK') {
-      return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${latitude},${longitude}&key=${API_KEY}`;
-    }
-  } catch (error) {
-    console.error('Erro ao verificar Street View:', error);
-  }
-
-  return ''; // Sem cobertura do Street View
-}
-
 // Busca todas as fotos de um lugar via Places API
 async function getPlacePhotos(placeId: string): Promise<string[]> {
   if (!API_KEY) return [];
@@ -269,11 +247,6 @@ export async function POST(request: NextRequest) {
         data.cidade = 'Santos';
         data.estado = 'SP';
       }
-    }
-
-    // Gera URL do Street View se tiver coordenadas (verifica se existe cobertura)
-    if (data.latitude && data.longitude) {
-      data.streetViewUrl = await getStreetViewUrl(data.latitude, data.longitude);
     }
 
     // Busca todas as fotos do Google Places
