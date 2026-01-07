@@ -39,14 +39,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('📥 Carregando dados do usuário:', userId);
 
-      // Buscar perfil com timeout de 10s
+      // Buscar perfil com timeout de 30s (Supabase pode estar acordando)
       const { data: perfilData, error: perfilError } = await withTimeout(
         supabase
           .from('perfis')
           .select('*')
           .eq('id', userId)
           .maybeSingle(),
-        10000
+        30000
       );
 
       if (perfilError) {
