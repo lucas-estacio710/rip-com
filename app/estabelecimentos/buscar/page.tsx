@@ -32,6 +32,18 @@ export default function BuscarEstabelecimentoPage() {
   const { unidade } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [cidade, setCidade] = useState('Santos, SP');
+
+  const cidadesBaixadaSantista = [
+    'Santos, SP',
+    'São Vicente, SP',
+    'Guarujá, SP',
+    'Cubatão, SP',
+    'Praia Grande, SP',
+    'Bertioga, SP',
+    'Mongaguá, SP',
+    'Itanhaém, SP',
+    'Peruíbe, SP',
+  ];
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null);
@@ -221,12 +233,15 @@ export default function BuscarEstabelecimentoPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Cidade</label>
-              <input
-                type="text"
+              <select
                 value={cidade}
                 onChange={(e) => setCidade(e.target.value)}
                 className="w-full"
-              />
+              >
+                {cidadesBaixadaSantista.map((c) => (
+                  <option key={c} value={c}>{c.replace(', SP', '')}</option>
+                ))}
+              </select>
             </div>
           </div>
           <button
