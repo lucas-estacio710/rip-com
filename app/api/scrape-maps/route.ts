@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Gera URL do Google Street View
 function getStreetViewUrl(latitude: number, longitude: number, size: string = '600x400'): string {
-  // Tenta NEXT_PUBLIC primeiro, depois GOOGLE_MAPS_API_KEY
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
-  console.log('🔑 Google Maps API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NÃO ENCONTRADA');
   if (!apiKey) return '';
   return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${latitude},${longitude}&key=${apiKey}`;
 }
@@ -225,16 +223,9 @@ export async function POST(request: NextRequest) {
       data.streetViewUrl = getStreetViewUrl(data.latitude, data.longitude);
     }
 
-    // Debug: mostra se a API key foi encontrada
-    const hasApiKey = !!(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY);
-
     return NextResponse.json({
       success: true,
-      data,
-      debug: {
-        hasApiKey,
-        envKeys: Object.keys(process.env).filter(k => k.includes('GOOGLE')).join(', ') || 'nenhuma'
-      }
+      data
     });
 
   } catch (error) {
