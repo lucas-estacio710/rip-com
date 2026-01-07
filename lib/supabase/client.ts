@@ -187,29 +187,38 @@ export function createClient() {
         return builder;
       },
 
-      insert: (values: any) => ({
-        select: () => ({
-          single: async () => {
-            try {
-              const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(values),
-              });
+      insert: (values: any) => {
+        const doInsert = async () => {
+          try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+              method: 'POST',
+              headers: getHeaders(),
+              body: JSON.stringify(values),
+            });
 
-              const data = await response.json();
+            const data = await response.json();
 
-              if (!response.ok) {
-                return { data: null, error: data };
-              }
-
-              return { data: Array.isArray(data) ? data[0] : data, error: null };
-            } catch (error) {
-              return { data: null, error };
+            if (!response.ok) {
+              return { data: null, error: data };
             }
-          },
-        }),
-      }),
+
+            return { data: Array.isArray(data) ? data[0] : data, error: null };
+          } catch (error) {
+            return { data: null, error };
+          }
+        };
+
+        return {
+          select: () => ({
+            single: () => ({
+              abortSignal: () => doInsert(),
+              then: (resolve: any) => doInsert().then(resolve),
+            }),
+            then: (resolve: any) => doInsert().then(resolve),
+          }),
+          then: (resolve: any) => doInsert().then(resolve),
+        };
+      },
 
       update: (values: any) => {
         let filters: string[] = [];
