@@ -28,6 +28,7 @@ function AdicionarPorLinkContent() {
   const [longitude, setLongitude] = useState<number>();
   const [extractedRating, setExtractedRating] = useState<number>();
   const [fotoUrl, setFotoUrl] = useState<string>();
+  const [fotosDisponiveis, setFotosDisponiveis] = useState<{url: string, tipo: string}[]>([]);
 
   // Processa URL compartilhada
   useEffect(() => {
@@ -143,11 +144,20 @@ function AdicionarPorLinkContent() {
         if (data.horarioFuncionamento) setHorarioFuncionamento(data.horarioFuncionamento);
         if (data.latitude) setLatitude(data.latitude);
         if (data.longitude) setLongitude(data.longitude);
-        // Prioriza Street View sobre foto do Google Places
+
+        // Coleta todas as fotos disponíveis
+        const fotos: {url: string, tipo: string}[] = [];
         if (data.streetViewUrl) {
-          setFotoUrl(data.streetViewUrl);
-        } else if (data.fotoUrl) {
-          setFotoUrl(data.fotoUrl);
+          fotos.push({ url: data.streetViewUrl, tipo: 'Street View' });
+        }
+        if (data.fotoUrl) {
+          fotos.push({ url: data.fotoUrl, tipo: 'Google Places' });
+        }
+        setFotosDisponiveis(fotos);
+
+        // Seleciona a primeira foto como padrão
+        if (fotos.length > 0) {
+          setFotoUrl(fotos[0].url);
         }
 
         // Infere o tipo
@@ -301,15 +311,61 @@ function AdicionarPorLinkContent() {
                 {horarioFuncionamento && <p>✓ Horário: {horarioFuncionamento}</p>}
                 {latitude && longitude && <p>✓ Coordenadas: {latitude.toFixed(4)}, {longitude.toFixed(4)}</p>}
                 {extractedRating && <p>✓ Avaliação Google: {extractedRating} estrelas</p>}
-                {fotoUrl && <p>✓ Foto do Street View extraída</p>}
+                {fotosDisponiveis.length > 0 && <p>✓ {fotosDisponiveis.length} foto(s) disponível(is)</p>}
               </div>
-              {fotoUrl && (
+              {fotosDisponiveis.length > 0 && (
                 <div className="mt-3">
-                  <img
-                    src={fotoUrl}
-                    alt={nome}
-                    className="w-full max-w-sm rounded-lg border-2 border-green-300 dark:border-green-700"
-                  />
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">
+                    Selecione a foto:
+                  </p>
+                  <div className="flex gap-3 flex-wrap">
+                    {fotosDisponiveis.map((foto, index) => (
+                      <div
+                        key={index}
+                        onClick={() => setFotoUrl(foto.url)}
+                        className={`cursor-pointer rounded-lg overflow-hidden border-4 transition-all ${
+                          fotoUrl === foto.url
+                            ? 'border-green-500 ring-2 ring-green-500'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-green-400'
+                        }`}
+                      >
+                        <img
+                          src={foto.url}
+                          alt={`${nome} - ${foto.tipo}`}
+                          className="w-32 h-24 object-cover"
+                        />
+                        <div className={`text-xs text-center py-1 ${
+                          fotoUrl === foto.url
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-700'
+                        }`}>
+                          {foto.tipo}
+                        </div>
+                      </div>
+                    ))}
+                    {/* Opção sem foto */}
+                    <div
+                      onClick={() => setFotoUrl(undefined)}
+                      className={`cursor-pointer rounded-lg overflow-hidden border-4 transition-all ${
+                        !fotoUrl
+                          ? 'border-green-500 ring-2 ring-green-500'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-green-400'
+                      }`}
+                    >
+                      <div className="w-32 h-24 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                      <div className={`text-xs text-center py-1 ${
+                        !fotoUrl
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700'
+                      }`}>
+                        Sem foto
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
               <p className="mt-2 text-xs text-green-700 dark:text-green-300">
