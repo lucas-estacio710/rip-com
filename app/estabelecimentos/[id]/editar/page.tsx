@@ -18,6 +18,12 @@ export default function EditarEstabelecimentoPage({
   // Estados
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [fotoAtual, setFotoAtual] = useState<string | null>(null);
+  const [buscandoFotos, setBuscandoFotos] = useState(false);
+  const [fotosDisponiveis, setFotosDisponiveis] = useState<{url: string, tipo: string}[]>([]);
+  const [fotoSelecionada, setFotoSelecionada] = useState<string | null>(null);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
 
   // Form fields
   const [nome, setNome] = useState('');
@@ -55,6 +61,13 @@ export default function EditarEstabelecimentoPage({
           setTipo(data.tipo);
           setRelacionamento(data.relacionamento as NivelRelacionamento);
           setObservacoes(data.observacoes || '');
+          // Foto e coordenadas
+          if (data.fotos && data.fotos.length > 0) {
+            setFotoAtual(data.fotos[0]);
+            setFotoSelecionada(data.fotos[0]);
+          }
+          setLatitude(data.latitude || null);
+          setLongitude(data.longitude || null);
         }
       } catch (error) {
         console.error('Erro ao carregar estabelecimento:', error);
@@ -65,6 +78,66 @@ export default function EditarEstabelecimentoPage({
     }
     loadEstabelecimento();
   }, [id]);
+
+  // Buscar fotos do Google Places
+  const buscarFotos = async () => {
+    setBuscandoFotos(true);
+    setFotosDisponiveis([]);
+
+    try {
+      // Busca pelo nome + cidade
+      const searchQuery = `${nome} ${cidade}, ${estado}`;
+      const response = await fetch(`/api/places/search?query=${encodeURIComponent(searchQuery)}&cidade=${encodeURIComponent(cidade + ', ' + estado)}`);
+
+      if (!response.ok) throw new Error('Erro na busca');
+
+      const data = await response.json();
+      const fotos: {url: string, tipo: string}[] = [];
+
+      // Se tem coordenadas, busca Street View
+      if (latitude && longitude) {
+        const streetViewRes = await fetch(`/api/places/streetview?lat=${latitude}&lng=${longitude}`);
+        if (streetViewRes.ok) {
+          const svData = await streetViewRes.json();
+          if (svData.url) {
+            fotos.push({ url: svData.url, tipo: 'Street View' });
+          }
+        }
+      }
+
+      // Adiciona fotos dos resultados
+      if (data.results && data.results.length > 0) {
+        // Busca detalhes do primeiro resultado para pegar mais fotos
+        const placeId = data.results[0].placeId;
+        const detailsRes = await fetch(`/api/places/details?placeId=${encodeURIComponent(placeId)}`);
+
+        if (detailsRes.ok) {
+          const detailsData = await detailsRes.json();
+          if (detailsData.result?.fotos) {
+            detailsData.result.fotos.forEach((url: string, index: number) => {
+              fotos.push({ url, tipo: `Foto ${index + 1}` });
+            });
+          } else if (detailsData.result?.foto) {
+            fotos.push({ url: detailsData.result.foto, tipo: 'Google Places' });
+          }
+        }
+
+        // Adiciona fotos dos outros resultados
+        data.results.slice(0, 5).forEach((result: any, index: number) => {
+          if (result.foto) {
+            fotos.push({ url: result.foto, tipo: `Resultado ${index + 1}` });
+          }
+        });
+      }
+
+      setFotosDisponiveis(fotos);
+    } catch (error) {
+      console.error('Erro ao buscar fotos:', error);
+      alert('Erro ao buscar fotos. Tente novamente.');
+    } finally {
+      setBuscandoFotos(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!nome || !endereco) {
@@ -90,6 +163,7 @@ export default function EditarEstabelecimentoPage({
         horario_funcionamento: horarioFuncionamento || null,
         relacionamento,
         observacoes: observacoes || null,
+        fotos: fotoSelecionada ? [fotoSelecionada] : null,
       });
 
       if (updated) {
@@ -267,6 +341,93 @@ export default function EditarEstabelecimentoPage({
 
           {/* Right Column */}
           <div className="space-y-4">
+            {/* Seção de Foto */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Foto do Estabelecimento</label>
+
+              {/* Foto atual */}
+              <div className="mb-3">
+                {fotoSelecionada ? (
+                  <img
+                    src={fotoSelecionada}
+                    alt={nome}
+                    className="w-full h-40 object-cover rounded-lg"
+                  />
+                ) : (
+                  <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                    <span className="text-gray-500">Sem foto</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Botão buscar fotos */}
+              <button
+                type="button"
+                onClick={buscarFotos}
+                disabled={buscandoFotos}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                {buscandoFotos ? 'Buscando fotos...' : 'Buscar Novas Fotos'}
+              </button>
+
+              {/* Grid de fotos disponíveis */}
+              {fotosDisponiveis.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Selecione uma foto:
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                    {fotosDisponiveis.map((foto, index) => (
+                      <div
+                        key={index}
+                        onClick={() => setFotoSelecionada(foto.url)}
+                        className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+                          fotoSelecionada === foto.url
+                            ? 'border-primary ring-2 ring-primary'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                        }`}
+                      >
+                        <img
+                          src={foto.url}
+                          alt={foto.tipo}
+                          className="w-full h-20 object-cover"
+                        />
+                        <div className={`text-xs text-center py-1 ${
+                          fotoSelecionada === foto.url
+                            ? 'bg-primary text-white'
+                            : 'bg-gray-100 dark:bg-gray-800'
+                        }`}>
+                          {foto.tipo}
+                        </div>
+                      </div>
+                    ))}
+                    {/* Opção sem foto */}
+                    <div
+                      onClick={() => setFotoSelecionada(null)}
+                      className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+                        !fotoSelecionada
+                          ? 'border-primary ring-2 ring-primary'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="w-full h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                      <div className={`text-xs text-center py-1 ${
+                        !fotoSelecionada
+                          ? 'bg-primary text-white'
+                          : 'bg-gray-100 dark:bg-gray-800'
+                      }`}>
+                        Sem foto
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-2">
                 Tipo de Estabelecimento
