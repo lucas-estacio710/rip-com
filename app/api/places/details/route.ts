@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Todos os campos disponíveis da Places API
     const fields = [
       'place_id',
       'name',
@@ -35,6 +36,11 @@ export async function GET(request: NextRequest) {
       'photos',
       'opening_hours',
       'website',
+      'url',                    // Link do Google Maps
+      'business_status',        // OPERATIONAL, CLOSED_TEMPORARILY, CLOSED_PERMANENTLY
+      'price_level',            // 0-4 (Free to Very Expensive)
+      'reviews',                // Avaliações dos usuários
+      'editorial_summary',      // Resumo editorial do Google
     ].join(',');
 
     const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${apiKey}&language=pt-BR`;
@@ -74,6 +80,14 @@ export async function GET(request: NextRequest) {
       horarioFuncionamento = place.opening_hours.weekday_text.join('\n');
     }
 
+    // Múltiplas fotos
+    const fotos: string[] = [];
+    if (place.photos) {
+      place.photos.slice(0, 10).forEach((photo: any) => {
+        fotos.push(`https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photo.photo_reference}&key=${apiKey}`);
+      });
+    }
+
     const result = {
       placeId: place.place_id,
       nome: place.name,
@@ -82,14 +96,26 @@ export async function GET(request: NextRequest) {
       estado,
       cep,
       telefone: place.formatted_phone_number || place.international_phone_number,
+      telefoneInternacional: place.international_phone_number,
       latitude: place.geometry.location.lat,
       longitude: place.geometry.location.lng,
       rating: place.rating,
       totalReviews: place.user_ratings_total,
       tipos: place.types,
       foto: fotoUrl,
+      fotos, // Todas as fotos disponíveis
       horarioFuncionamento,
       website: place.website,
+      googleMapsUrl: place.url,
+      statusNegocio: place.business_status,
+      nivelPreco: place.price_level,
+      resumoEditorial: place.editorial_summary?.overview,
+      avaliacoes: place.reviews?.slice(0, 3).map((r: any) => ({
+        autor: r.author_name,
+        nota: r.rating,
+        texto: r.text,
+        tempo: r.relative_time_description
+      })),
     };
 
     return NextResponse.json({ result });
