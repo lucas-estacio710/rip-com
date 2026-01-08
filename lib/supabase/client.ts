@@ -223,33 +223,47 @@ export function createClient() {
       update: (values: any) => {
         let filters: string[] = [];
 
-        const builder = {
+        const doUpdate = async () => {
+          const url = `${SUPABASE_URL}/rest/v1/${table}?${filters.join('&')}`;
+
+          try {
+            const response = await fetch(url, {
+              method: 'PATCH',
+              headers: getHeaders(),
+              body: JSON.stringify(values),
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              return { data: null, error };
+            }
+
+            const data = await response.json();
+            return { data: Array.isArray(data) ? data : [data], error: null };
+          } catch (error) {
+            return { data: null, error };
+          }
+        };
+
+        const builder: any = {
           eq: (column: string, value: any) => {
             filters.push(`${column}=eq.${value}`);
             return builder;
           },
-          then: async (resolve: any) => {
-            const url = `${SUPABASE_URL}/rest/v1/${table}?${filters.join('&')}`;
-
-            try {
-              const response = await fetch(url, {
-                method: 'PATCH',
-                headers: getHeaders(),
-                body: JSON.stringify(values),
-              });
-
-              if (!response.ok) {
-                const error = await response.json();
-                resolve({ data: null, error });
-                return;
-              }
-
-              const data = await response.json();
-              resolve({ data, error: null });
-            } catch (error) {
-              resolve({ data: null, error });
-            }
-          },
+          select: () => ({
+            single: () => ({
+              then: async (resolve: any) => {
+                const result = await doUpdate();
+                if (result.error) {
+                  resolve({ data: null, error: result.error });
+                } else {
+                  resolve({ data: result.data?.[0] || null, error: null });
+                }
+              },
+            }),
+            then: (resolve: any) => doUpdate().then(resolve),
+          }),
+          then: (resolve: any) => doUpdate().then(resolve),
         };
 
         return builder;
