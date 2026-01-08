@@ -2,8 +2,8 @@
 // Formato: MAJOR.MINOR.PATCH
 // Atualizar manualmente a cada release significativo
 
-export const APP_VERSION = '1.2.0';
-export const APP_BUILD_DATE = '2026-01-07';
+export const APP_VERSION = '1.3.0';
+export const APP_BUILD_DATE = '2026-01-08';
 export const APP_NAME = 'RIP.PET CRM';
 
 // Changelog resumido
