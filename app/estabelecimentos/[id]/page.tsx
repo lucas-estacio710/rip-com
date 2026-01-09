@@ -277,7 +277,7 @@ export default function EstabelecimentoDetailPage({
                   {estabelecimento.nome}
                 </h1>
                 <p className="text-white/80 text-sm">
-                  📍 {estabelecimento.cidade}, {estabelecimento.estado}
+                  📍 {estabelecimento.bairro ? `${estabelecimento.bairro} - ` : ''}{estabelecimento.cidade}, {estabelecimento.estado}
                 </p>
               </div>
 
@@ -371,6 +371,7 @@ export default function EstabelecimentoDetailPage({
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InfoItem label="Endereço" value={estabelecimento.endereco} />
+                {estabelecimento.bairro && <InfoItem label="Bairro" value={estabelecimento.bairro} />}
                 <InfoItem label="Cidade/Estado" value={`${estabelecimento.cidade} - ${estabelecimento.estado}`} />
                 {estabelecimento.cep && <InfoItem label="CEP" value={estabelecimento.cep} />}
                 {estabelecimento.telefone && (

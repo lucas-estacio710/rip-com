@@ -16,6 +16,7 @@ export type Estabelecimento = {
   nome: string;
   tipo: 'clinica' | 'hospital' | 'petshop' | 'casa-racao' | 'laboratorio' | 'outro';
   endereco: string;
+  bairro: string | null;
   cidade: string;
   estado: string;
   cep: string | null;

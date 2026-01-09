@@ -68,6 +68,7 @@ export default function BuscarEstabelecimentoPage() {
   // Campos editáveis do formulário
   const [nome, setNome] = useState('');
   const [endereco, setEndereco] = useState('');
+  const [bairro, setBairro] = useState('');
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
   const [cep, setCep] = useState('');
@@ -252,6 +253,7 @@ export default function BuscarEstabelecimentoPage() {
         nome,
         tipo,
         endereco,
+        bairro: bairro || null,
         cidade,
         estado,
         cep: cep || null,
@@ -301,6 +303,7 @@ export default function BuscarEstabelecimentoPage() {
     setGoogleData(null);
     setNome('');
     setEndereco('');
+    setBairro('');
     setCidade('');
     setEstado('');
     setCep('');
@@ -530,7 +533,12 @@ export default function BuscarEstabelecimentoPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Endereço *</label>
-                  <input type="text" value={endereco} onChange={(e) => setEndereco(e.target.value)} className="w-full" required />
+                  <input type="text" value={endereco} onChange={(e) => setEndereco(e.target.value)} className="w-full" required placeholder="Rua, número" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Bairro</label>
+                  <input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="w-full" placeholder="Ex: Gonzaga" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

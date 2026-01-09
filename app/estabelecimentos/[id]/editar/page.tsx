@@ -29,6 +29,7 @@ export default function EditarEstabelecimentoPage({
   // Form fields
   const [nome, setNome] = useState('');
   const [endereco, setEndereco] = useState('');
+  const [bairro, setBairro] = useState('');
   const [cidade, setCidade] = useState('Santos');
   const [estado, setEstado] = useState('SP');
   const [cep, setCep] = useState('');
@@ -64,6 +65,7 @@ export default function EditarEstabelecimentoPage({
         if (data) {
           setNome(data.nome);
           setEndereco(data.endereco);
+          setBairro(data.bairro || '');
           setCidade(data.cidade);
           setEstado(data.estado);
           setCep(data.cep || '');
@@ -234,6 +236,7 @@ export default function EditarEstabelecimentoPage({
         nome,
         tipo,
         endereco,
+        bairro: bairro || null,
         cidade,
         estado,
         cep: cep || null,
@@ -332,14 +335,26 @@ export default function EditarEstabelecimentoPage({
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Endereço Completo *
+                Endereço (Rua, número) *
               </label>
               <input
                 type="text"
                 value={endereco}
                 onChange={(e) => setEndereco(e.target.value)}
                 className="w-full"
+                placeholder="Ex: Rua Conselheiro Nébias, 123"
                 required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Bairro</label>
+              <input
+                type="text"
+                value={bairro}
+                onChange={(e) => setBairro(e.target.value)}
+                className="w-full"
+                placeholder="Ex: Gonzaga"
               />
             </div>
 

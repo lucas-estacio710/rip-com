@@ -72,7 +72,8 @@ export default function EstabelecimentosPage() {
       const matchSearch =
         est.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         est.endereco.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        est.cidade.toLowerCase().includes(searchTerm.toLowerCase());
+        est.cidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (est.bairro && est.bairro.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchTipo = tipoFilter === 'todos' || est.tipo === tipoFilter;
 
@@ -374,7 +375,7 @@ export default function EstabelecimentosPage() {
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-sm truncate">{est.nome}</h3>
-                        <p className="text-xs text-gray-500 truncate">{est.cidade}</p>
+                        <p className="text-xs text-gray-500 truncate">{est.bairro ? `${est.bairro} - ${est.cidade}` : est.cidade}</p>
                       </div>
 
                       {/* Estrelas interativas */}
