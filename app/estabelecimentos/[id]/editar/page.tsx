@@ -41,6 +41,19 @@ export default function EditarEstabelecimentoPage({
   const [relacionamento, setRelacionamento] = useState<NivelRelacionamento>(0);
   const [observacoes, setObservacoes] = useState('');
 
+  // Novos campos de inteligência comercial
+  const [porteEquipe, setPorteEquipe] = useState<string>('');
+  const [veterinariosFixos, setVeterinariosFixos] = useState<string>('');
+  const [veterinariosVolantes, setVeterinariosVolantes] = useState<string>('');
+  const [ilhaDeExibicao, setIlhaDeExibicao] = useState<string[]>([]);
+  const [politicaConcorrencia, setPoliticaConcorrencia] = useState<string>('');
+  const [concorrentesPresentes, setConcorrentesPresentes] = useState<string[]>([]);
+  const [qtdeMediaObitosMensal, setQtdeMediaObitosMensal] = useState<string>('');
+  const [percentualPrefeitura, setPercentualPrefeitura] = useState<string>('');
+  const [valorPrefeitura10kg, setValorPrefeitura10kg] = useState<string>('');
+  const [modeloGratificacao, setModeloGratificacao] = useState<string>('');
+  const [estrategia, setEstrategia] = useState('');
+
   // Carregar dados do estabelecimento
   useEffect(() => {
     async function loadEstabelecimento() {
@@ -69,6 +82,18 @@ export default function EditarEstabelecimentoPage({
           }
           setLatitude(data.latitude || null);
           setLongitude(data.longitude || null);
+          // Novos campos
+          setPorteEquipe(data.porte_equipe || '');
+          setVeterinariosFixos(data.veterinarios_fixos?.toString() || '');
+          setVeterinariosVolantes(data.veterinarios_volantes?.toString() || '');
+          setIlhaDeExibicao(data.ilha_de_exibicao || []);
+          setPoliticaConcorrencia(data.politica_concorrencia || '');
+          setConcorrentesPresentes(data.concorrentes_presentes || []);
+          setQtdeMediaObitosMensal(data.qtde_media_obitos_mensal?.toString() || '');
+          setPercentualPrefeitura(data.percentual_prefeitura?.toString() || '');
+          setValorPrefeitura10kg(data.valor_prefeitura_10kg?.toString() || '');
+          setModeloGratificacao(data.modelo_gratificacao || '');
+          setEstrategia(data.estrategia || '');
         }
       } catch (error) {
         console.error('Erro ao carregar estabelecimento:', error);
@@ -220,6 +245,18 @@ export default function EditarEstabelecimentoPage({
         relacionamento,
         observacoes: observacoes || null,
         fotos: fotoFinal ? [fotoFinal] : null,
+        // Novos campos
+        porte_equipe: porteEquipe || null,
+        veterinarios_fixos: veterinariosFixos ? parseInt(veterinariosFixos) : null,
+        veterinarios_volantes: veterinariosVolantes ? parseInt(veterinariosVolantes) : null,
+        ilha_de_exibicao: ilhaDeExibicao.length > 0 ? ilhaDeExibicao : null,
+        politica_concorrencia: politicaConcorrencia || null,
+        concorrentes_presentes: concorrentesPresentes.length > 0 ? concorrentesPresentes : null,
+        qtde_media_obitos_mensal: qtdeMediaObitosMensal ? parseInt(qtdeMediaObitosMensal) : null,
+        percentual_prefeitura: percentualPrefeitura ? parseInt(percentualPrefeitura) : null,
+        valor_prefeitura_10kg: valorPrefeitura10kg ? parseFloat(valorPrefeitura10kg) : null,
+        modelo_gratificacao: modeloGratificacao || null,
+        estrategia: estrategia || null,
       });
 
       if (updated) {
@@ -586,9 +623,220 @@ export default function EditarEstabelecimentoPage({
               <textarea
                 value={observacoes}
                 onChange={(e) => setObservacoes(e.target.value)}
-                rows={10}
+                rows={4}
                 className="w-full"
                 placeholder="Anotações sobre o estabelecimento..."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Seção: Equipe */}
+        <div className="border-t pt-6 mt-6">
+          <h3 className="text-lg font-semibold mb-4">Equipe</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Porte da Equipe</label>
+              <select
+                value={porteEquipe}
+                onChange={(e) => setPorteEquipe(e.target.value)}
+                className="w-full"
+              >
+                <option value="">Selecione...</option>
+                <option value="ate_5">Até 5 funcionários</option>
+                <option value="5_10">5 a 10 funcionários</option>
+                <option value="10_15">10 a 15 funcionários</option>
+                <option value="mais_15">Mais de 15 funcionários</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Veterinários Fixos</label>
+              <input
+                type="number"
+                min="0"
+                value={veterinariosFixos}
+                onChange={(e) => setVeterinariosFixos(e.target.value)}
+                className="w-full"
+                placeholder="Ex: 3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Veterinários Volantes</label>
+              <input
+                type="number"
+                min="0"
+                value={veterinariosVolantes}
+                onChange={(e) => setVeterinariosVolantes(e.target.value)}
+                className="w-full"
+                placeholder="Ex: 2"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Seção: Material e Exibição */}
+        <div className="border-t pt-6 mt-6">
+          <h3 className="text-lg font-semibold mb-4">Material e Exibição</h3>
+          <div>
+            <label className="block text-sm font-medium mb-2">Locais para Material de Divulgação</label>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { value: 'recepcao', label: 'Recepção' },
+                { value: 'consultorios', label: 'Consultórios' },
+                { value: 'veterinarios', label: 'Direto com veterinários' },
+                { value: 'nenhum', label: 'Nenhum local' },
+              ].map((opcao) => (
+                <label key={opcao.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={ilhaDeExibicao.includes(opcao.value)}
+                    onChange={(e) => {
+                      if (opcao.value === 'nenhum') {
+                        setIlhaDeExibicao(e.target.checked ? ['nenhum'] : []);
+                      } else {
+                        if (e.target.checked) {
+                          setIlhaDeExibicao(prev => [...prev.filter(v => v !== 'nenhum'), opcao.value]);
+                        } else {
+                          setIlhaDeExibicao(prev => prev.filter(v => v !== opcao.value));
+                        }
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">{opcao.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Seção: Concorrência */}
+        <div className="border-t pt-6 mt-6">
+          <h3 className="text-lg font-semibold mb-4">Concorrência</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Política de Concorrência</label>
+              <select
+                value={politicaConcorrencia}
+                onChange={(e) => setPoliticaConcorrencia(e.target.value)}
+                className="w-full"
+              >
+                <option value="">Selecione...</option>
+                <option value="aberto_todos">Aberto - aceita material de qualquer crematório</option>
+                <option value="seletivo">Seletivo - tem critérios para aceitar parceiros</option>
+                <option value="parceiro_exclusivo_nosso">Exclusivo conosco</option>
+                <option value="parceiro_exclusivo_outro">Exclusivo com outro crematório</option>
+                <option value="nao_indica">Não indica nenhum crematório</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Concorrentes Presentes</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'pet_memorial', label: 'Pet Memorial' },
+                  { value: 'allma', label: 'Allma' },
+                  { value: 'luna_pet', label: 'Luna Pet' },
+                  { value: 'pet_assistencia', label: 'Pet Assistência' },
+                  { value: 'eden_pet', label: 'Eden Pet' },
+                  { value: 'mypetmemo', label: 'MyPetMemo' },
+                ].map((opcao) => (
+                  <label key={opcao.value} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={concorrentesPresentes.includes(opcao.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setConcorrentesPresentes(prev => [...prev, opcao.value]);
+                        } else {
+                          setConcorrentesPresentes(prev => prev.filter(v => v !== opcao.value));
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    <span className="text-sm">{opcao.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Seção: Métricas de Óbitos */}
+        <div className="border-t pt-6 mt-6">
+          <h3 className="text-lg font-semibold mb-4">Métricas de Óbitos</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Qtde Média de Óbitos/Mês</label>
+              <input
+                type="number"
+                min="0"
+                value={qtdeMediaObitosMensal}
+                onChange={(e) => setQtdeMediaObitosMensal(e.target.value)}
+                className="w-full"
+                placeholder="Ex: 15"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">% Prefeitura (descarte)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={percentualPrefeitura}
+                  onChange={(e) => setPercentualPrefeitura(e.target.value)}
+                  className="w-full pr-8"
+                  placeholder="Ex: 30"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Valor Prefeitura (10kg)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={valorPrefeitura10kg}
+                  onChange={(e) => setValorPrefeitura10kg(e.target.value)}
+                  className="w-full pl-10"
+                  placeholder="Ex: 150.00"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Seção: Comercial */}
+        <div className="border-t pt-6 mt-6">
+          <h3 className="text-lg font-semibold mb-4">Comercial</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Modelo de Gratificação</label>
+              <select
+                value={modeloGratificacao}
+                onChange={(e) => setModeloGratificacao(e.target.value)}
+                className="w-full"
+              >
+                <option value="">Selecione...</option>
+                <option value="direto_clinica">Direto para a clínica</option>
+                <option value="direto_veterinarios">Direto para os veterinários</option>
+                <option value="indireto_veterinarios">Indireto para veterinários (brindes, etc)</option>
+                <option value="brindes_tutores">Brindes para os tutores</option>
+                <option value="desconto_tutores">Desconto para os tutores</option>
+                <option value="nao_aceita">Não aceita gratificação</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Estratégia</label>
+              <textarea
+                value={estrategia}
+                onChange={(e) => setEstrategia(e.target.value)}
+                rows={3}
+                className="w-full"
+                placeholder="Ex: Ir conquistando aos poucos, manter relacionamento com a recepção..."
               />
             </div>
           </div>

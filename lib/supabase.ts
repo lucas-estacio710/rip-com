@@ -33,6 +33,18 @@ export type Estabelecimento = {
   ultima_visita: string | null;
   criado_em: string;
   atualizado_em: string;
+  // Novos campos de inteligência comercial
+  porte_equipe: 'ate_5' | '5_10' | '10_15' | 'mais_15' | null;
+  veterinarios_fixos: number | null;
+  veterinarios_volantes: number | null;
+  ilha_de_exibicao: string[] | null; // ['recepcao', 'consultorios', 'veterinarios', 'nenhum']
+  politica_concorrencia: 'aberto_todos' | 'seletivo' | 'parceiro_exclusivo_nosso' | 'parceiro_exclusivo_outro' | 'nao_indica' | null;
+  concorrentes_presentes: string[] | null; // ['pet_memorial', 'allma', 'luna_pet', 'pet_assistencia', 'eden_pet', 'mypetmemo']
+  qtde_media_obitos_mensal: number | null;
+  percentual_prefeitura: number | null; // 0-100
+  valor_prefeitura_10kg: number | null;
+  modelo_gratificacao: 'direto_clinica' | 'direto_veterinarios' | 'indireto_veterinarios' | 'brindes_tutores' | 'desconto_tutores' | 'nao_aceita' | null;
+  estrategia: string | null;
 };
 
 export type Contato = {
