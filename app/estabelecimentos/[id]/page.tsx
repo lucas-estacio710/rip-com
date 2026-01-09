@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Estabelecimento } from '@/lib/supabase';
 import { Visita, CreateVisitaInput } from '@/types/visitas';
 import VisitaModal from '@/components/VisitaModal';
+import HistoricoTimeline from '@/components/HistoricoTimeline';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function EstabelecimentoDetailPage({
@@ -16,7 +17,7 @@ export default function EstabelecimentoDetailPage({
   const { unidade } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    'info' | 'contatos' | 'visitas' | 'indicacoes'
+    'info' | 'contatos' | 'visitas' | 'indicacoes' | 'historico'
   >('info');
 
   // Unwrap params usando React.use()
@@ -171,11 +172,8 @@ export default function EstabelecimentoDetailPage({
     { id: 'info' as const, label: 'Informações', count: null },
     { id: 'contatos' as const, label: 'Contatos', count: contatos.length },
     { id: 'visitas' as const, label: 'Visitas', count: visitas.length },
-    {
-      id: 'indicacoes' as const,
-      label: 'Indicações',
-      count: indicacoes.length,
-    },
+    { id: 'indicacoes' as const, label: 'Indicações', count: indicacoes.length },
+    { id: 'historico' as const, label: 'Histórico', count: null },
   ];
 
   return (
@@ -751,6 +749,16 @@ export default function EstabelecimentoDetailPage({
                   </div>
                 ))
               )}
+            </div>
+          )}
+
+          {/* Tab: Histórico */}
+          {activeTab === 'historico' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold">Histórico de Alterações</h3>
+              </div>
+              <HistoricoTimeline estabelecimentoId={estabelecimento.id} />
             </div>
           )}
         </div>

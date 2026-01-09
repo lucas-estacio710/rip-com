@@ -4,7 +4,7 @@
  */
 
 import { createClient } from './supabase/client';
-import type { Estabelecimento } from './supabase';
+import type { Estabelecimento, HistoricoAlteracao } from './supabase';
 
 // ============================================
 // ESTABELECIMENTOS
@@ -285,4 +285,58 @@ export async function getDashboardStats() {
     estabelecimentosSemVisita30Dias: estabelecimentosSemVisita30Dias || 0,
     aniversariantesProximos: 0, // TODO: implementar
   };
+}
+
+// ============================================
+// HISTÓRICO DE ALTERAÇÕES
+// ============================================
+
+export async function getHistoricoByEstabelecimento(estabelecimentoId: string): Promise<HistoricoAlteracao[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('historico_alteracoes')
+    .select('*')
+    .eq('entidade', 'estabelecimento')
+    .eq('entidade_id', estabelecimentoId)
+    .order('criado_em', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar histórico:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function getHistoricoRecente(limit: number = 20): Promise<HistoricoAlteracao[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('historico_alteracoes')
+    .select('*')
+    .order('criado_em', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Erro ao buscar histórico recente:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function getConquistasRecentes(limit: number = 10): Promise<HistoricoAlteracao[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('historico_alteracoes')
+    .select('*')
+    .eq('tipo', 'conquista')
+    .order('criado_em', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Erro ao buscar conquistas:', error);
+    return [];
+  }
+
+  return data || [];
 }

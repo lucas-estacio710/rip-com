@@ -89,3 +89,18 @@ export type Indicacao = {
   observacoes: string | null;
   created_at: string;
 };
+
+export type HistoricoAlteracao = {
+  id: string;
+  entidade: 'estabelecimento' | 'contato' | 'visita';
+  entidade_id: string;
+  entidade_nome: string | null;
+  campo: string;
+  campo_label: string;
+  valor_anterior: string | null;
+  valor_novo: string | null;
+  tipo: 'conquista' | 'alerta' | 'alteracao';
+  nota: string | null;
+  alterado_por: string | null;
+  criado_em: string;
+};
