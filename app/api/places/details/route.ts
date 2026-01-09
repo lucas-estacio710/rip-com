@@ -68,6 +68,21 @@ export async function GET(request: NextRequest) {
     const cep = addressComponents.find((c: any) =>
       c.types.includes('postal_code')
     )?.long_name;
+    // Bairro - pode vir de diferentes tipos
+    const bairro = addressComponents.find((c: any) =>
+      c.types.includes('sublocality_level_1') ||
+      c.types.includes('sublocality') ||
+      c.types.includes('neighborhood')
+    )?.long_name;
+    // Rua e número separados
+    const rua = addressComponents.find((c: any) =>
+      c.types.includes('route')
+    )?.long_name;
+    const numero = addressComponents.find((c: any) =>
+      c.types.includes('street_number')
+    )?.long_name;
+    // Endereço simplificado (sem cidade/estado/cep)
+    const enderecoSimplificado = rua ? (numero ? `${rua}, ${numero}` : rua) : place.formatted_address?.split(',')[0];
 
     let fotoUrl;
     if (place.photos && place.photos[0]) {
@@ -91,7 +106,9 @@ export async function GET(request: NextRequest) {
     const result = {
       placeId: place.place_id,
       nome: place.name,
-      endereco: place.formatted_address || '',
+      endereco: enderecoSimplificado || place.formatted_address || '',
+      enderecoCompleto: place.formatted_address || '',
+      bairro,
       cidade,
       estado,
       cep,

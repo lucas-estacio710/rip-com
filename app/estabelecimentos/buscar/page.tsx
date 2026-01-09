@@ -140,6 +140,7 @@ export default function BuscarEstabelecimentoPage() {
       // Preenche campos editáveis
       setNome(result.nome || '');
       setEndereco(result.endereco || '');
+      setBairro(result.bairro || '');
       setCidade(result.cidade || '');
       setEstado(result.estado || '');
       setCep(result.cep || '');
@@ -442,21 +443,6 @@ export default function BuscarEstabelecimentoPage() {
                 </div>
               )}
             </div>
-
-            {/* Avaliações */}
-            {googleData.avaliacoes && googleData.avaliacoes.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
-                <p className="text-gray-500 mb-2">Últimas avaliações:</p>
-                <div className="space-y-2">
-                  {googleData.avaliacoes.map((av, i) => (
-                    <div key={i} className="text-sm bg-white dark:bg-gray-800 p-2 rounded">
-                      <p><strong>{av.autor}</strong> - ⭐ {av.nota} - {av.tempo}</p>
-                      <p className="text-gray-600 dark:text-gray-400 truncate">{av.texto}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Formulário Editável */}
