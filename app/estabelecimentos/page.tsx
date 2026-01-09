@@ -23,6 +23,10 @@ export default function EstabelecimentosPage() {
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEstabelecimento, setSelectedEstabelecimento] = useState<string | null>(null);
+  const [showOutrasCidades, setShowOutrasCidades] = useState(false);
+
+  // Cidades principais da Baixada Santista
+  const cidadesPrincipais = ['Santos', 'São Vicente', 'Praia Grande', 'Guarujá'];
 
   // Carregar estabelecimentos do Supabase
   useEffect(() => {
@@ -47,6 +51,11 @@ export default function EstabelecimentosPage() {
     const cidades = [...new Set(estabelecimentos.map(e => e.cidade))].sort();
     return cidades;
   }, [estabelecimentos]);
+
+  // Outras cidades (que não são as principais)
+  const outrasCidades = useMemo(() => {
+    return cidadesUnicas.filter(c => !cidadesPrincipais.includes(c));
+  }, [cidadesUnicas]);
 
   // Contadores por relacionamento
   const contadores = useMemo(() => {
@@ -80,7 +89,9 @@ export default function EstabelecimentosPage() {
       const matchRelacionamento = relacionamentoFilter === 'todos' ||
         est.relacionamento === Number(relacionamentoFilter);
 
-      const matchCidade = cidadeFilter === 'todos' || est.cidade === cidadeFilter;
+      const matchCidade = cidadeFilter === 'todos' ||
+        est.cidade === cidadeFilter ||
+        (cidadeFilter === 'outras' && !cidadesPrincipais.includes(est.cidade));
 
       // Filtro de concorrência
       let matchConcorrencia = true;
@@ -224,19 +235,99 @@ export default function EstabelecimentosPage() {
             </svg>
           </div>
 
-          {/* Filtros em linha */}
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={cidadeFilter}
-              onChange={(e) => setCidadeFilter(e.target.value)}
-              className="text-sm py-2 px-3 min-w-[120px]"
+          {/* Toggle Buttons de Cidades */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={() => {
+                setCidadeFilter('todos');
+                setShowOutrasCidades(false);
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                cidadeFilter === 'todos'
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
             >
-              <option value="todos">Todas cidades</option>
-              {cidadesUnicas.map(cidade => (
-                <option key={cidade} value={cidade}>{cidade}</option>
-              ))}
-            </select>
+              Todas
+            </button>
+            {cidadesPrincipais.map(cidade => {
+              const count = estabelecimentos.filter(e => e.cidade === cidade).length;
+              return (
+                <button
+                  key={cidade}
+                  onClick={() => {
+                    setCidadeFilter(cidadeFilter === cidade ? 'todos' : cidade);
+                    setShowOutrasCidades(false);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    cidadeFilter === cidade
+                      ? 'bg-primary text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {cidade.replace(' ', '\u00A0')} {count > 0 && <span className="opacity-70">({count})</span>}
+                </button>
+              );
+            })}
+            {outrasCidades.length > 0 && (
+              <button
+                onClick={() => {
+                  if (showOutrasCidades) {
+                    setShowOutrasCidades(false);
+                    if (cidadeFilter !== 'todos' && !cidadesPrincipais.includes(cidadeFilter) && cidadeFilter !== 'outras') {
+                      setCidadeFilter('todos');
+                    }
+                  } else {
+                    setShowOutrasCidades(true);
+                    setCidadeFilter('outras');
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  showOutrasCidades || cidadeFilter === 'outras' || (!cidadesPrincipais.includes(cidadeFilter) && cidadeFilter !== 'todos')
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                Outras {outrasCidades.length > 0 && <span className="opacity-70">({outrasCidades.length})</span>}
+                <span className="ml-1">{showOutrasCidades ? '▲' : '▼'}</span>
+              </button>
+            )}
+          </div>
 
+          {/* Outras cidades expandidas */}
+          {showOutrasCidades && outrasCidades.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
+              <button
+                onClick={() => setCidadeFilter('outras')}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  cidadeFilter === 'outras'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                Todas outras
+              </button>
+              {outrasCidades.map(cidade => {
+                const count = estabelecimentos.filter(e => e.cidade === cidade).length;
+                return (
+                  <button
+                    key={cidade}
+                    onClick={() => setCidadeFilter(cidadeFilter === cidade ? 'outras' : cidade)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      cidadeFilter === cidade
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {cidade} {count > 0 && <span className="opacity-70">({count})</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Outros Filtros em linha */}
+          <div className="flex flex-wrap gap-2">
             <select
               value={tipoFilter}
               onChange={(e) => setTipoFilter(e.target.value as EstabelecimentoTipo | 'todos')}
