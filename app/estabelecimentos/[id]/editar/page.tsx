@@ -823,7 +823,7 @@ export default function EditarEstabelecimentoPage({
                 <option value="">Selecione...</option>
                 <option value="direto_clinica">Direto para a clínica</option>
                 <option value="direto_veterinarios">Direto para os veterinários</option>
-                <option value="indireto_veterinarios">Indireto para veterinários (brindes, etc)</option>
+                <option value="indireto_veterinarios">Indireto para veterinários</option>
                 <option value="brindes_tutores">Brindes para os tutores</option>
                 <option value="desconto_tutores">Desconto para os tutores</option>
                 <option value="nao_aceita">Não aceita gratificação</option>
