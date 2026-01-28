@@ -678,6 +678,8 @@ function ModalNormalizar({
   const [latitude, setLatitude] = useState<number | null>(estabelecimento.latitude || null);
   const [longitude, setLongitude] = useState<number | null>(estabelecimento.longitude || null);
   const [fotoSelecionada, setFotoSelecionada] = useState<string | null>(estabelecimento.fotos?.[0] || null);
+  const [fotosDisponiveis, setFotosDisponiveis] = useState<string[]>([]);
+  const [tipo, setTipo] = useState<EstabelecimentoTipo>(estabelecimento.tipo as EstabelecimentoTipo || 'clinica');
 
   const handleSearch = async () => {
     if (!estabelecimento.nome.trim()) return;
@@ -732,9 +734,10 @@ function ModalNormalizar({
       setLatitude(result.latitude || null);
       setLongitude(result.longitude || null);
 
-      // Foto
+      // Fotos disponíveis do Google
       const fotos = result.fotos || (result.foto ? [result.foto] : []);
-      if (fotos.length > 0) {
+      setFotosDisponiveis(fotos);
+      if (fotos.length > 0 && !estabelecimento.fotos?.[0]) {
         setFotoSelecionada(fotos[0]);
       }
     } catch (error) {
@@ -774,6 +777,7 @@ function ModalNormalizar({
 
       const updates = {
         nome,
+        tipo,
         endereco,
         bairro: bairro || null,
         cidade,
@@ -908,10 +912,43 @@ function ModalNormalizar({
                 <p className="text-sm text-green-800 dark:text-green-200">✅ Dados carregados do Google. Revise e salve.</p>
               </div>
 
-              {/* Preview foto */}
-              {fotoSelecionada && (
-                <img src={fotoSelecionada} alt="" className="w-full h-32 object-cover rounded-xl" />
-              )}
+              {/* Seletor de Fotos */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Foto</label>
+                {fotoSelecionada ? (
+                  <img src={fotoSelecionada} alt="" className="w-full h-32 object-cover rounded-xl mb-2" />
+                ) : (
+                  <div className="w-full h-32 bg-gray-200 dark:bg-gray-700 rounded-xl flex items-center justify-center mb-2">
+                    <span className="text-gray-500">Sem foto</span>
+                  </div>
+                )}
+                {fotosDisponiveis.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Escolha uma foto do Google:</p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {fotosDisponiveis.map((foto, i) => (
+                        <img
+                          key={i}
+                          src={foto}
+                          alt={`Foto ${i + 1}`}
+                          className={`w-full h-14 object-cover rounded cursor-pointer border-2 transition-all ${
+                            fotoSelecionada === foto ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-gray-300'
+                          }`}
+                          onClick={() => setFotoSelecionada(foto)}
+                        />
+                      ))}
+                      <div
+                        className={`w-full h-14 bg-gray-200 dark:bg-gray-700 rounded cursor-pointer border-2 flex items-center justify-center transition-all ${
+                          !fotoSelecionada ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-gray-300'
+                        }`}
+                        onClick={() => setFotoSelecionada(null)}
+                      >
+                        <span className="text-xs text-gray-500">Sem</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -920,6 +957,17 @@ function ModalNormalizar({
                   {selectedPlace?.nome && selectedPlace.nome !== nome && (
                     <p className="text-xs text-gray-400 mt-1 italic">Google: {selectedPlace.nome}</p>
                   )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Tipo</label>
+                  <select value={tipo} onChange={(e) => setTipo(e.target.value as EstabelecimentoTipo)} className="w-full px-3 py-2 border rounded-lg">
+                    <option value="clinica">🏥 Clínica</option>
+                    <option value="hospital">🏨 Hospital</option>
+                    <option value="petshop">🐾 Pet Shop</option>
+                    <option value="casa-racao">🍖 Casa de Ração</option>
+                    <option value="laboratorio">🔬 Laboratório</option>
+                    <option value="outro">🏢 Outro</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Telefone</label>
