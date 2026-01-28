@@ -20,6 +20,9 @@ export default function EstabelecimentosPage() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Estado para modal de normalização
+  const [normalizarEst, setNormalizarEst] = useState<Estabelecimento | null>(null);
+
   const cidadesPrincipais = ['Santos', 'São Vicente', 'Praia Grande', 'Guarujá'];
 
   useEffect(() => {
@@ -148,6 +151,12 @@ export default function EstabelecimentosPage() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // Callback para atualizar estabelecimento após normalização
+  const handleNormalizarSuccess = (updated: Estabelecimento) => {
+    setEstabelecimentos(prev => prev.map(e => e.id === updated.id ? updated : e));
+    setNormalizarEst(null);
   };
 
   if (loading) {
@@ -392,20 +401,31 @@ export default function EstabelecimentosPage() {
               getDias={getDias}
               getTipoIcon={getTipoIcon}
               onStarClick={handleStarClick}
+              onNormalizarClick={() => setNormalizarEst(est)}
             />
           ))}
         </div>
+      )}
+
+      {/* Modal de Normalização */}
+      {normalizarEst && (
+        <ModalNormalizar
+          estabelecimento={normalizarEst}
+          onClose={() => setNormalizarEst(null)}
+          onSuccess={handleNormalizarSuccess}
+        />
       )}
     </div>
   );
 }
 
 // Card de Estabelecimento
-function EstabelecimentoCard({ est, getDias, getTipoIcon, onStarClick }: {
+function EstabelecimentoCard({ est, getDias, getTipoIcon, onStarClick, onNormalizarClick }: {
   est: Estabelecimento;
   getDias: (d: string | null) => number | null;
   getTipoIcon: (t: string) => string;
   onStarClick: (id: string, star: number, current: number) => void;
+  onNormalizarClick: () => void;
 }) {
   const dias = getDias(est.ultima_visita);
   const urgente = dias === null || dias > 30;
@@ -426,15 +446,31 @@ function EstabelecimentoCard({ est, getDias, getTipoIcon, onStarClick }: {
         )}
 
         {/* Status badges */}
-        <div className="absolute top-2 left-2 right-2 flex justify-between">
+        <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
           <span className="px-2 py-1 bg-black/50 backdrop-blur-sm text-white text-xs rounded-lg">
             {getTipoIcon(est.tipo)}
           </span>
-          {est.politica_concorrencia === 'parceiro_exclusivo_nosso' && (
-            <span className="px-2 py-1 bg-violet-500 text-white text-xs rounded-lg">
-              ⭐ Exclusivo
-            </span>
-          )}
+          <div className="flex items-center gap-1">
+            {/* Botão Normalizar */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onNormalizarClick();
+              }}
+              className="p-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+              title="Normalizar dados via Google"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+            {est.politica_concorrencia === 'parceiro_exclusivo_nosso' && (
+              <span className="px-2 py-1 bg-violet-500 text-white text-xs rounded-lg">
+                ⭐ Exclusivo
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Urgência */}
@@ -584,6 +620,367 @@ function EstabelecimentoRow({ est, selected, onClick, getDias, onStarClick }: {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </Link>
+    </div>
+  );
+}
+
+// Modal de Normalização (provisório)
+interface PlaceResult {
+  placeId: string;
+  nome: string;
+  endereco: string;
+  cidade: string;
+  estado: string;
+  latitude: number;
+  longitude: number;
+  rating?: number;
+  totalReviews?: number;
+  tipos: string[];
+  foto?: string;
+}
+
+interface PlaceDetails extends PlaceResult {
+  telefone?: string;
+  cep?: string;
+  horarioFuncionamento?: string;
+  website?: string;
+  googleMapsUrl?: string;
+  bairro?: string;
+  fotos?: string[];
+}
+
+function ModalNormalizar({
+  estabelecimento,
+  onClose,
+  onSuccess,
+}: {
+  estabelecimento: Estabelecimento;
+  onClose: () => void;
+  onSuccess: (updated: Estabelecimento) => void;
+}) {
+  const [cidadeBusca, setCidadeBusca] = useState(estabelecimento.cidade || 'Santos, SP');
+  const [isSearching, setIsSearching] = useState(false);
+  const [results, setResults] = useState<PlaceResult[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Campos editáveis
+  const [nome, setNome] = useState(estabelecimento.nome);
+  const [endereco, setEndereco] = useState(estabelecimento.endereco || '');
+  const [bairro, setBairro] = useState(estabelecimento.bairro || '');
+  const [cidade, setCidade] = useState(estabelecimento.cidade || '');
+  const [estado, setEstado] = useState(estabelecimento.estado || '');
+  const [cep, setCep] = useState(estabelecimento.cep || '');
+  const [telefone, setTelefone] = useState(estabelecimento.telefone || '');
+  const [website, setWebsite] = useState(estabelecimento.website || '');
+  const [horarioFuncionamento, setHorarioFuncionamento] = useState(estabelecimento.horario_funcionamento || '');
+  const [latitude, setLatitude] = useState<number | null>(estabelecimento.latitude || null);
+  const [longitude, setLongitude] = useState<number | null>(estabelecimento.longitude || null);
+  const [fotoSelecionada, setFotoSelecionada] = useState<string | null>(estabelecimento.fotos?.[0] || null);
+
+  const handleSearch = async () => {
+    if (!estabelecimento.nome.trim()) return;
+
+    setIsSearching(true);
+    setResults([]);
+    setSelectedPlace(null);
+
+    try {
+      const cidadeFormatada = cidadeBusca.includes(',') ? cidadeBusca : `${cidadeBusca}, SP`;
+      const response = await fetch(
+        `/api/places/search?query=${encodeURIComponent(estabelecimento.nome)}&cidade=${encodeURIComponent(cidadeFormatada)}`
+      );
+
+      if (!response.ok) throw new Error('Erro ao buscar');
+
+      const data = await response.json();
+      setResults(data.results || []);
+    } catch (error) {
+      console.error('Erro na busca:', error);
+      alert('Erro ao buscar no Google.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectPlace = async (place: PlaceResult) => {
+    setIsLoadingDetails(true);
+
+    try {
+      const response = await fetch(
+        `/api/places/details?placeId=${encodeURIComponent(place.placeId)}`
+      );
+
+      if (!response.ok) throw new Error('Erro ao buscar detalhes');
+
+      const data = await response.json();
+      const result = data.result;
+
+      setSelectedPlace(result);
+
+      // Preenche campos com dados do Google
+      setNome(result.nome || estabelecimento.nome);
+      setEndereco(result.endereco || '');
+      setBairro(result.bairro || '');
+      setCidade(result.cidade || '');
+      setEstado(result.estado || '');
+      setCep(result.cep || '');
+      setTelefone(result.telefone || '');
+      setWebsite(result.website || '');
+      setHorarioFuncionamento(result.horarioFuncionamento || '');
+      setLatitude(result.latitude || null);
+      setLongitude(result.longitude || null);
+
+      // Foto
+      const fotos = result.fotos || (result.foto ? [result.foto] : []);
+      if (fotos.length > 0) {
+        setFotoSelecionada(fotos[0]);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar detalhes:', error);
+      alert('Erro ao buscar detalhes.');
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!nome || !endereco) {
+      alert('Nome e endereço são obrigatórios');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Se a foto é do Google, faz upload pro Supabase
+      let fotoFinal = fotoSelecionada;
+      if (fotoSelecionada && fotoSelecionada.includes('googleapis.com')) {
+        console.log('📸 Fazendo upload da foto do Google...');
+        const uploadRes = await fetch('/api/upload-foto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fotoUrl: fotoSelecionada }),
+        });
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          fotoFinal = uploadData.url;
+        }
+      }
+
+      const { updateEstabelecimento } = await import('@/lib/db');
+
+      const updates = {
+        nome,
+        endereco,
+        bairro: bairro || null,
+        cidade,
+        estado,
+        cep: cep || null,
+        telefone: telefone || null,
+        website: website || null,
+        horario_funcionamento: horarioFuncionamento || null,
+        latitude,
+        longitude,
+        fotos: fotoFinal ? [fotoFinal] : estabelecimento.fotos,
+      };
+
+      const updated = await updateEstabelecimento(estabelecimento.id, updates);
+
+      if (updated) {
+        alert('Estabelecimento atualizado com sucesso!');
+        onSuccess(updated);
+      } else {
+        throw new Error('Erro ao atualizar');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      alert(`Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold">🔍 Normalizar Dados</h2>
+            <p className="text-sm text-gray-500">Buscar e atualizar via Google Places</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Info do estabelecimento atual */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+            <p className="text-sm text-amber-800 dark:text-amber-200 font-medium mb-1">Estabelecimento atual:</p>
+            <p className="font-bold text-amber-900 dark:text-amber-100">{estabelecimento.nome}</p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">{estabelecimento.cidade || 'Cidade não definida'}</p>
+          </div>
+
+          {/* Busca */}
+          {!selectedPlace && (
+            <>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium mb-1">Cidade para busca</label>
+                  <input
+                    type="text"
+                    value={cidadeBusca}
+                    onChange={(e) => setCidadeBusca(e.target.value)}
+                    placeholder="Ex: Santos, SP"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={handleSearch}
+                    disabled={isSearching}
+                    className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {isSearching ? 'Buscando...' : 'Buscar'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Resultados */}
+              {results.length > 0 && (
+                <div className="border rounded-xl overflow-hidden">
+                  <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b">
+                    <p className="text-sm font-medium">{results.length} resultados encontrados</p>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto divide-y">
+                    {results.map((place) => (
+                      <div
+                        key={place.placeId}
+                        onClick={() => handleSelectPlace(place)}
+                        className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                      >
+                        {place.foto ? (
+                          <img src={place.foto} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center">🏥</div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{place.nome}</p>
+                          <p className="text-xs text-gray-500 truncate">{place.endereco}</p>
+                          {place.rating && (
+                            <p className="text-xs text-yellow-600">⭐ {place.rating.toFixed(1)}</p>
+                          )}
+                        </div>
+                        <span className="text-gray-400">→</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isSearching && (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Buscando no Google...</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Loading detalhes */}
+          {isLoadingDetails && (
+            <div className="text-center py-8">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Carregando detalhes...</p>
+            </div>
+          )}
+
+          {/* Formulário de edição */}
+          {selectedPlace && !isLoadingDetails && (
+            <div className="space-y-4">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
+                <p className="text-sm text-green-800 dark:text-green-200">✅ Dados carregados do Google. Revise e salve.</p>
+              </div>
+
+              {/* Preview foto */}
+              {fotoSelecionada && (
+                <img src={fotoSelecionada} alt="" className="w-full h-32 object-cover rounded-xl" />
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nome</label>
+                  <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Telefone</label>
+                  <input type="text" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Endereço</label>
+                  <input type="text" value={endereco} onChange={(e) => setEndereco(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Bairro</label>
+                  <input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Cidade</label>
+                  <input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Estado</label>
+                  <input type="text" value={estado} onChange={(e) => setEstado(e.target.value)} className="w-full px-3 py-2 border rounded-lg" maxLength={2} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">CEP</label>
+                  <input type="text" value={cep} onChange={(e) => setCep(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Website</label>
+                  <input type="text" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Horário de Funcionamento</label>
+                  <textarea value={horarioFuncionamento} onChange={(e) => setHorarioFuncionamento(e.target.value)} rows={2} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedPlace(null)}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                ← Voltar aos resultados
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-4 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            Cancelar
+          </button>
+          {selectedPlace && (
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50"
+            >
+              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
