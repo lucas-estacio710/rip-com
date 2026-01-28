@@ -719,8 +719,8 @@ function ModalNormalizar({
 
       setSelectedPlace(result);
 
-      // Preenche campos com dados do Google
-      setNome(result.nome || estabelecimento.nome);
+      // Preenche campos com dados do Google (exceto nome - mantém o do banco)
+      // Nome é mantido do banco, o do Google fica só como referência
       setEndereco(result.endereco || '');
       setBairro(result.bairro || '');
       setCidade(result.cidade || '');
@@ -915,8 +915,11 @@ function ModalNormalizar({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Nome</label>
-                  <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                  <label className="block text-sm font-medium mb-1">Nome (mantido do banco)</label>
+                  <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-gray-50" />
+                  {selectedPlace?.nome && selectedPlace.nome !== nome && (
+                    <p className="text-xs text-gray-400 mt-1 italic">Google: {selectedPlace.nome}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Telefone</label>
