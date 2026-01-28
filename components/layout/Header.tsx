@@ -23,15 +23,15 @@ export default function Header({ title }: { title?: string }) {
               priority
             />
             <div className="flex flex-col leading-tight">
-              <span className="text-sm text-white font-semibold">Inteligência</span>
               <span className="text-sm text-white font-semibold">Comercial</span>
+              <span className="text-sm text-white font-semibold">Station</span>
             </div>
           </div>
 
           {/* Texto - Apenas desktop */}
           <div className="hidden md:flex flex-col leading-tight">
-            <span className="text-sm text-white font-semibold">Inteligência</span>
             <span className="text-sm text-white font-semibold">Comercial</span>
+            <span className="text-sm text-white font-semibold">Station</span>
           </div>
         </div>
 
